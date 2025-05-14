@@ -3,12 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model Patient {
-  id           String        @id @default(uuid())
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
   email        String        @unique
   createdAt    DateTime      @default(now())
   city         String
@@ -18,7 +18,7 @@ model Patient {
 }
 
 model Doctor {
-  id             String        @id @default(uuid())
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
   email          String        @unique
   password       String
   name           String?
@@ -30,13 +30,13 @@ model Doctor {
   updatedAt      DateTime      @updatedAt
   history        History[]
   appointments   Appointment[]
-  hospitalId     String?       @unique
+  hospitalId     String?       @unique @db.ObjectId
   hospital       Hospital?     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   availableTimes TimeSlot[]
 }
 
 model Hospital {
-  id            String   @id @default(uuid())
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
   name          String
   city          String
   address       String
@@ -54,7 +54,7 @@ model Hospital {
 }
 
 model Staff {
-  id         String    @id @default(uuid())
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
   email      String    @unique
   name       String?
   image      String?
@@ -62,35 +62,35 @@ model Staff {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   Hospital   Hospital? @relation(fields: [hospitalId], references: [id])
-  hospitalId String?
+  hospitalId String? @db.ObjectId
 }
 
 model TimeSlot {
-  id        String   @id @default(uuid())
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
   startTime DateTime
   endTime   DateTime
-  doctorId  String
+  doctorId  String @db.ObjectId
   doctor    Doctor   @relation(fields: [doctorId], references: [id])
 }
 
 model Appointment {
-  id         String   @id @default(uuid())
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
   date       DateTime
   disease    String?
-  doctorId   String
+  doctorId   String @db.ObjectId
   doctor     Doctor   @relation(fields: [doctorId], references: [id])
-  patientId  String
+  patientId  String @db.ObjectId
   patient    Patient  @relation(fields: [patientId], references: [id])
   isApproved Boolean  @default(false)
 }
 
 model History {
-  id              String   @id @default(uuid())
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
   date            DateTime @default(now())
   appointmentDate DateTime
   disease         String?
-  doctorId        String
+  doctorId        String @db.ObjectId
   doctor          Doctor   @relation(fields: [doctorId], references: [id])
-  patientId       String
+  patientId       String @db.ObjectId
   patient         Patient  @relation(fields: [patientId], references: [id])
 }
