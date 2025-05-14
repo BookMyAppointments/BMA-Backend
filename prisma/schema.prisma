@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Patient {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  createdAt    DateTime      @default(now())
+  city         String
+  appointments Appointment[]
+  history      History[]
+  name         String?
+}
+
+model Doctor {
+  id             String        @id @default(uuid())
+  email          String        @unique
+  password       String
+  name           String?
+  image          String?
+  isVerified     Boolean       @default(false)
+  verifyCode     String
+  phone          String?       @unique
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  history        History[]
+  appointments   Appointment[]
+  hospitalId     String?       @unique
+  hospital       Hospital?     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  availableTimes TimeSlot[]
+}
+
+model Hospital {
+  id            String   @id @default(uuid())
+  name          String
+  city          String
+  address       String
+  image         String
+  fee           Int
+  availableDays Int[]
+  diseases      String[]
+  phones        String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  doctor        Doctor?
+  staff         Staff[]
+
+  @@index([city])
+}
+
+model Staff {
+  id         String    @id @default(uuid())
+  email      String    @unique
+  name       String?
+  image      String?
+  phone      String?   @unique
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  Hospital   Hospital? @relation(fields: [hospitalId], references: [id])
+  hospitalId String?
+}
+
+model TimeSlot {
+  id        String   @id @default(uuid())
+  startTime DateTime
+  endTime   DateTime
+  doctorId  String
+  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+}
+
+model Appointment {
+  id         String   @id @default(uuid())
+  date       DateTime
+  disease    String?
+  doctorId   String
+  doctor     Doctor   @relation(fields: [doctorId], references: [id])
+  patientId  String
+  patient    Patient  @relation(fields: [patientId], references: [id])
+  isApproved Boolean  @default(false)
+}
+
+model History {
+  id              String   @id @default(uuid())
+  date            DateTime @default(now())
+  appointmentDate DateTime
+  disease         String?
+  doctorId        String
+  doctor          Doctor   @relation(fields: [doctorId], references: [id])
+  patientId       String
+  patient         Patient  @relation(fields: [patientId], references: [id])
+}
