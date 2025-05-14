@@ -7,90 +7,267 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Patient {
-  id           String        @id @default(auto()) @map("_id") @db.ObjectId
-  email        String        @unique
-  createdAt    DateTime      @default(now())
-  city         String
-  appointments Appointment[]
-  history      History[]
-  name         String?
+// ========== AUTH & USER MGMT ==========
+
+model User {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  email         String         @unique
+  password      String
+  name          String
+  phone         String?
+  role          Role
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  profile       Profile?
+  tokens        Token[]
+  medicalRecord MedicalRecord?
+  appointments  Appointment[]
+  testResults   TestResult[]
+  notifications Notification[]
+  payments      Payment[]
+  Doctor        Doctor?
+  Review        Review[]
 }
+
+model Profile {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String   @unique @db.ObjectId
+  gender     String?
+  dob        DateTime?
+  address    String?
+  locationId String?  @db.ObjectId
+  location   Location? @relation(fields: [locationId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+enum Role {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+
+model Token {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  token     String
+  type      String
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+// ========== DOCTOR MGMT ==========
 
 model Doctor {
-  id           String        @id @default(auto()) @map("_id") @db.ObjectId
-  email          String        @unique
-  password       String
-  name           String?
-  image          String?
-  isVerified     Boolean       @default(false)
-  verifyCode     String
-  phone          String?       @unique
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  history        History[]
+  id             String         @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String         @unique @db.ObjectId
+  specialization String[]
+  qualifications String[]
+  ratings        Float?
+  reviews        Review[]
+  availability   Availability[]
+  affiliations   DoctorHospital[]
   appointments   Appointment[]
-  hospitalId     String?       @unique @db.ObjectId
-  hospital       Hospital?     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  availableTimes TimeSlot[]
+  user           User           @relation(fields: [userId], references: [id])
 }
+
+model DoctorHospital {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  doctorId   String   @db.ObjectId
+  hospitalId String   @db.ObjectId
+  doctor     Doctor   @relation(fields: [doctorId], references: [id])
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+}
+
+model Review {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  doctorId  String   @db.ObjectId
+  userId    String   @db.ObjectId
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Availability {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  doctorId  String @db.ObjectId
+  day       String
+  startTime String
+  endTime   String
+  doctor    Doctor @relation(fields: [doctorId], references: [id])
+}
+
+// ========== HOSPITAL/LAB MGMT ==========
 
 model Hospital {
-  id           String        @id @default(auto()) @map("_id") @db.ObjectId
-  name          String
-  city          String
-  address       String
-  image         String
-  fee           Int
-  availableDays Int[]
-  diseases      String[]
-  phones        String[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  doctor        Doctor?
-  staff         Staff[]
-
-  @@index([city])
+  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  departments String[]
+  facilities  String[]
+  services    String[]
+  hours       String
+  locationId  String           @db.ObjectId
+  location    Location         @relation(fields: [locationId], references: [id])
+  doctors     DoctorHospital[]
+  labs        Lab[]
 }
 
-model Staff {
-  id           String        @id @default(auto()) @map("_id") @db.ObjectId
-  email      String    @unique
-  name       String?
-  image      String?
-  phone      String?   @unique
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  Hospital   Hospital? @relation(fields: [hospitalId], references: [id])
-  hospitalId String? @db.ObjectId
+model Lab {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  hospitalId  String        @db.ObjectId
+  name        String
+  services    String[]
+  locationId  String        @db.ObjectId
+  location    Location      @relation(fields: [locationId], references: [id])
+  tests       MedicalTest[]
+  hospital    Hospital      @relation(fields: [hospitalId], references: [id])
+  Appointment Appointment[]
 }
 
-model TimeSlot {
-  id           String        @id @default(auto()) @map("_id") @db.ObjectId
-  startTime DateTime
-  endTime   DateTime
-  doctorId  String @db.ObjectId
-  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+// ========== LOCATION ==========
+
+model Location {
+  id       String     @id @default(auto()) @map("_id") @db.ObjectId
+  lat      Float
+  lng      Float
+  address  String
+  Profile  Profile[]
+  Hospital Hospital[]
+  Lab      Lab[]
 }
+
+// ========== APPOINTMENTS ==========
 
 model Appointment {
-  id           String        @id @default(auto()) @map("_id") @db.ObjectId
-  date       DateTime
-  disease    String?
-  doctorId   String @db.ObjectId
-  doctor     Doctor   @relation(fields: [doctorId], references: [id])
-  patientId  String @db.ObjectId
-  patient    Patient  @relation(fields: [patientId], references: [id])
-  isApproved Boolean  @default(false)
+  id            String            @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String            @db.ObjectId
+  doctorId      String?           @db.ObjectId
+  labId         String?           @db.ObjectId
+  testId        String?           @db.ObjectId
+  status        AppointmentStatus
+  scheduledAt   DateTime
+  rescheduledAt DateTime?
+  cancelledAt   DateTime?
+  user          User              @relation(fields: [userId], references: [id])
+  doctor        Doctor?           @relation(fields: [doctorId], references: [id])
+  lab           Lab?              @relation(fields: [labId], references: [id])
+  test          MedicalTest?      @relation(fields: [testId], references: [id])
 }
 
-model History {
-  id           String        @id @default(auto()) @map("_id") @db.ObjectId
-  date            DateTime @default(now())
-  appointmentDate DateTime
-  disease         String?
-  doctorId        String @db.ObjectId
-  doctor          Doctor   @relation(fields: [doctorId], references: [id])
-  patientId       String @db.ObjectId
-  patient         Patient  @relation(fields: [patientId], references: [id])
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+}
+
+// ========== MEDICAL TESTS ==========
+
+model MedicalTest {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  category    String
+  price       Float
+  homeSample  Boolean
+  labId       String        @db.ObjectId
+  lab         Lab           @relation(fields: [labId], references: [id])
+  results     TestResult[]
+  Appointment Appointment[]
+}
+
+model TestResult {
+  id       String      @id @default(auto()) @map("_id") @db.ObjectId
+  userId   String      @db.ObjectId
+  testId   String      @db.ObjectId
+  result   String
+  issuedAt DateTime
+  user     User        @relation(fields: [userId], references: [id])
+  test     MedicalTest @relation(fields: [testId], references: [id])
+}
+
+// ========== NOTIFICATIONS ==========
+
+model Notification {
+  id        String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String           @db.ObjectId
+  type      NotificationType
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id])
+}
+
+enum NotificationType {
+  REMINDER
+  CONFIRMATION
+  RESCHEDULE
+  TEST_RESULT
+}
+
+// ========== MEDICAL HISTORY ==========
+
+model MedicalRecord {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @unique @db.ObjectId
+  history   String[]
+  documents String[]
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+// ========== PAYMENT ==========
+
+model Payment {
+  id         String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String        @db.ObjectId
+  amount     Float
+  method     PaymentMethod
+  status     PaymentStatus
+  paidAt     DateTime
+  refundAt   DateTime?
+  invoiceUrl String?
+  user       User          @relation(fields: [userId], references: [id])
+}
+
+enum PaymentMethod {
+  UPI
+  CARD
+  NET_BANKING
+  CASH
+}
+
+enum PaymentStatus {
+  PAID
+  REFUNDED
+  FAILED
+}
+
+// ========== ANALYTICS (LOG TABLES) ==========
+
+model AnalyticsLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  event     String
+  userId    String?
+  createdAt DateTime @default(now())
+  data      Json
+}
+
+// ========== INTEGRATION CONFIG ==========
+
+model Integration {
+  id      String  @id @default(auto()) @map("_id") @db.ObjectId
+  name    String
+  config  Json
+  enabled Boolean @default(true)
+}
+
+// ========== API META ==========
+
+model ApiMeta {
+  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  version    String
+  rateLimit  Int
+  errorCodes Json
+  docsUrl    String
 }
