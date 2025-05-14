@@ -1,4 +1,3 @@
-// src/middlewares/authMiddleware.ts
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
@@ -10,7 +9,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     return res.status(401).json({ message: "Authentication token required" });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err: any, user: any) => {
+  jwt.verify(token, process.env.JWT_SECRET!, (err: any, user: any) => {
     if (err) {
       return res.status(403).json({ message: "Invalid or expired token" });
     }

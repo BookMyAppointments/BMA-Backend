@@ -1,13 +1,31 @@
-// src/emails/verificationMail.ts
-import nodemailer from 'nodemailer';
-import { env } from '../utils/env';
-interface EmailResult {
-  success: boolean;
-  error?: string;
-}
+import { EmailResult } from "../types/email";
+import { transporter } from "../utils/nodemailer";
 
-// Email template for verification
-const verificationEmailTemplate = (code: string) => `
+export const sendVerificationEmail = async (email: string, code: string): Promise<EmailResult> => {
+    try {
+        await transporter.verify();
+
+        const info = await transporter.sendMail({
+            from: `"Your App Name" <${process.env.EMAIL_FROM}>`,
+            to: email,
+            subject: 'Email Verification Code',
+            html: verificationEmailTemplate(code),
+            text: `Your verification code is: ${code}\n\nThis code will expire in 1 hour.`
+        });
+
+        console.log('Message sent: %s', info.messageId);
+        return { success: true };
+    } catch (error) {
+        console.error('Email sending error:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to send email'
+        };
+    }
+};
+
+
+export const verificationEmailTemplate = (code: string) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -45,52 +63,3 @@ const verificationEmailTemplate = (code: string) => `
 </body>
 </html>
 `;
-
-// Create reusable transporter object using SMTP transport
-const transporter = nodemailer.createTransport({
-    host: env.EMAIL_HOST,
-    port: env.EMAIL_PORT,
-    secure: env.EMAIL_USE_SSL, // true for 465, false for other ports
-    auth: {
-        user: env.EMAIL_USERNAME,
-        pass: env.EMAIL_PASSWORD
-    },
-    tls: {
-        rejectUnauthorized: false // For self-signed certificates
-    }
-});
-
-export const sendVerificationEmail = async (email: string, code: string): Promise<EmailResult> => {
-    try {
-        // Verify connection configuration
-        await transporter.verify();
-
-        // Send mail with defined transport object
-        const info = await transporter.sendMail({
-            from: `"Your App Name" <${env.EMAIL_FROM}>`,
-            to: email,
-            subject: 'Email Verification Code',
-            html: verificationEmailTemplate(code),
-            text: `Your verification code is: ${code}\n\nThis code will expire in 1 hour.`
-        });
-
-        console.log('Message sent: %s', info.messageId);
-        return { success: true };
-    } catch (error) {
-        console.error('Email sending error:', error);
-        return { 
-            success: false, 
-            error: error instanceof Error ? error.message : 'Failed to send email' 
-        };
-    }
-};
-
-// Optional: Test email function
-export const testEmailConnection = async (): Promise<void> => {
-    try {
-        await transporter.verify();
-        console.log('Server is ready to take our messages');
-    } catch (error) {
-        console.error('Email server connection failed:', error);
-    }
-};

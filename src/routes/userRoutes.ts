@@ -1,4 +1,3 @@
-// src/routes/userRoutes.ts
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import express from 'express';
@@ -8,14 +7,7 @@ import jwt from 'jsonwebtoken';
 import { authenticateToken } from '../middlewares/authMiddleware';
 
 const router = Router();
-router.use(express.json());
 
-// Helper function to generate verification code
-const generateVerificationCode = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
-
-// User Signup
 router.post('/signup', async (req: Request, res: Response) => {
   try {
     const { email, password, name, phone } = req.body;
