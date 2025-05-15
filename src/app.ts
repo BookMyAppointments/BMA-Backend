@@ -1,7 +1,8 @@
 import express, { Application } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import authRoutes from './routes/userRoutes';
+
+import authRoutes from './routes/user.routes';
 import doctorRoutes from './routes/doctor.Routes';
 import hospitalRoutes from './routes/hospital';
 

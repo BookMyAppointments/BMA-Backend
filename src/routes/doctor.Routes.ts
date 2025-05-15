@@ -282,7 +282,7 @@ router.get('/appointments', authenticateToken, isDoctor, asyncHandler(async (req
       }
     },
     orderBy: {
-      date: 'asc'
+      date : 'asc'
     }
   });
 
