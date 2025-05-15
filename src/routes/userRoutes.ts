@@ -1,75 +1,70 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
-import express from 'express';
 import bcrypt from 'bcryptjs';
 import { sendVerificationEmail } from "../emails/verificationMail";
 import jwt from 'jsonwebtoken';
 import { authenticateToken } from '../middlewares/authMiddleware';
+import { asyncHandler } from '../utils/asyncHandler';
+import { generateVerificationCode } from '../utils/helpers';
 
 const router = Router();
 
-router.post('/signup', async (req: Request, res: Response) => {
+router.post('/signup', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, password, name, phone } = req.body;
 
-    // Validate input
     if (!email || !password || !name) {
       return res.status(400).json({ message: "Email, password, and name are required" });
     }
 
-    // Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
 
-    if (existingUser?.emailVerified) {
+    if (existingUser?.verified) {
       return res.status(400).json({ message: "User already exists! Please login" });
     }
 
-    const verificationCode = generateVerificationCode();
     const hashedPassword = await bcrypt.hash(password, 10);
+    const verifyCode = generateVerificationCode();
 
-    if (existingUser && !existingUser.emailVerified) {
-      // Update existing unverified user
+    if (existingUser && !existingUser.verified) {
       await prisma.user.update({
         where: { email },
         data: {
           password: hashedPassword,
-          verificationCode,
+          verifyCode,
           name,
           phone
         }
       });
     } else {
-      // Create new user
       await prisma.user.create({
         data: {
           email,
           password: hashedPassword,
           name,
           phone: phone || null,
-          verificationCode,
-          role: 'USER', // Default role
-          emailVerified: false
+          verifyCode,
+          role: 'PATIENT',
+          verified: false
         }
       });
     }
 
-    // Send verification email
-    const emailResult = await sendVerificationEmail(email, verificationCode);
+    const emailResult = await sendVerificationEmail(email, verifyCode);
     if (!emailResult.success) {
       return res.status(500).json({ message: "Failed to send verification email" });
     }
 
-    return res.status(201).json({ message: "Verification code sent to your email" });
+    res.status(201).json({ message: "User registered successfully! Please check your email for verification." });
   } catch (error) {
     console.error("Signup error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-// Email Verification
-router.post('/verify', async (req: Request, res: Response) => {
+router.post('/verify', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, code } = req.body;
 
@@ -85,11 +80,11 @@ router.post('/verify', async (req: Request, res: Response) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (user.emailVerified) {
+    if (user.verified) {
       return res.status(400).json({ message: "Email already verified" });
     }
 
-    if (user.verificationCode !== code) {
+    if (user.verifyCode !== code) {
       return res.status(400).json({ message: "Invalid verification code" });
     }
 
@@ -97,8 +92,8 @@ router.post('/verify', async (req: Request, res: Response) => {
     await prisma.user.update({
       where: { email },
       data: {
-        emailVerified: true,
-        verificationCode: null
+        verified: true,
+        verifyCode: null
       }
     });
 
@@ -107,10 +102,9 @@ router.post('/verify', async (req: Request, res: Response) => {
     console.error("Verification error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-// User Login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/signin', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
@@ -123,11 +117,7 @@ router.post('/login', async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    if (!user.emailVerified) {
-      return res.status(403).json({ message: "Please verify your email first" });
+      return res.status(401).json({ message: "User does not exist!!" });
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
@@ -135,14 +125,12 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '24h' }
+      process.env.JWT_SECRET!,
+      { expiresIn: '7d' }
     );
 
-    // Omit password from response
     const { password: _, ...userWithoutPassword } = user;
 
     return res.status(200).json({
@@ -154,12 +142,10 @@ router.post('/login', async (req: Request, res: Response) => {
     console.error("Login error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-// Get User Profile (protected route)
-router.get('/profile', authenticateToken, async (req: Request, res: Response) => {
+router.get('/profile', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
-    // req.user is set by the authenticateToken middleware
     const userId = (req as any).user.userId;
 
     const user = await prisma.user.findUnique({
@@ -185,10 +171,9 @@ router.get('/profile', authenticateToken, async (req: Request, res: Response) =>
     console.error("Profile error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-// Update User Profile
-router.put('/profile', authenticateToken, async (req: Request, res: Response) => {
+router.put('/profile', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.userId;
     const { name, phone } = req.body;
@@ -216,10 +201,9 @@ router.put('/profile', authenticateToken, async (req: Request, res: Response) =>
     console.error("Update profile error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-// Password Reset Request
-router.post('/reset-password/request', async (req: Request, res: Response) => {
+router.post('/reset-password/request', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
 
@@ -232,22 +216,18 @@ router.post('/reset-password/request', async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      // Don't reveal if user doesn't exist for security
       return res.status(200).json({ message: "If the email exists, a reset code has been sent" });
     }
 
     const resetCode = generateVerificationCode();
-    const resetCodeExpires = new Date(Date.now() + 3600000); // 1 hour from now
 
     await prisma.user.update({
       where: { email },
       data: {
-        resetCode,
-        resetCodeExpires
+        verifyCode: resetCode,
       }
     });
 
-    // In a real app, send the reset code via email
     const emailResult = await sendVerificationEmail(email, resetCode);
     if (!emailResult.success) {
       return res.status(500).json({ message: "Failed to send reset code" });
@@ -258,10 +238,9 @@ router.post('/reset-password/request', async (req: Request, res: Response) => {
     console.error("Password reset request error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-// Verify Reset Code
-router.post('/reset-password/verify', async (req: Request, res: Response) => {
+router.post('/reset-password/verify', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, code } = req.body;
 
@@ -277,8 +256,8 @@ router.post('/reset-password/verify', async (req: Request, res: Response) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (user.resetCode !== code || !user.resetCodeExpires || user.resetCodeExpires < new Date()) {
-      return res.status(400).json({ message: "Invalid or expired reset code" });
+    if (user.verifyCode !== code) {
+      return res.status(400).json({ message: "Invalid Verification Code!!" });
     }
 
     return res.status(200).json({ message: "Reset code verified" });
@@ -286,14 +265,13 @@ router.post('/reset-password/verify', async (req: Request, res: Response) => {
     console.error("Reset code verification error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
-// Reset Password
-router.post('/reset-password', async (req: Request, res: Response) => {
+router.post('/reset-password', asyncHandler(async (req: Request, res: Response) => {
   try {
-    const { email, code, newPassword } = req.body;
+    const { email, newPassword } = req.body;
 
-    if (!email || !code || !newPassword) {
+    if (!email || !newPassword) {
       return res.status(400).json({ message: "Email, reset code, and new password are required" });
     }
 
@@ -304,19 +282,12 @@ router.post('/reset-password', async (req: Request, res: Response) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-
-    if (user.resetCode !== code || !user.resetCodeExpires || user.resetCodeExpires < new Date()) {
-      return res.status(400).json({ message: "Invalid or expired reset code" });
-    }
-
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     await prisma.user.update({
       where: { email },
       data: {
         password: hashedPassword,
-        resetCode: null,
-        resetCodeExpires: null
       }
     });
 
@@ -325,6 +296,6 @@ router.post('/reset-password', async (req: Request, res: Response) => {
     console.error("Password reset error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
-});
+}));
 
 export default router;

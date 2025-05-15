@@ -1,19 +1,39 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { prisma } from '../lib/prisma';
 
-export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+interface AuthenticatedRequest extends Request {
+  user?: any;
+}
 
-  if (!token) {
-    return res.status(401).json({ message: "Authentication token required" });
-  }
+export const authenticateToken = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const header = req.headers['authorization'];
+    const token = header?.split(' ')[1];
 
-  jwt.verify(token, process.env.JWT_SECRET!, (err: any, user: any) => {
-    if (err) {
-      return res.status(403).json({ message: "Invalid or expired token" });
+    if (!token) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
-    (req as any).user = user;
+
+    const verifiedToken = jwt.verify(token, process.env.JWT_SECRET!) as { email: string };
+    if (!verifiedToken) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    const user = await prisma.user.findFirst({
+      where: { email: verifiedToken.email }
+    });
+
+    if (!user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    req.user = user;
     next();
-  });
-};
+
+  } catch (error) {
+    console.error('Error in authentication:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}

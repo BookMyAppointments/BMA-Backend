@@ -16,6 +16,8 @@ model User {
   name          String
   phone         String?
   role          Role
+  verifyCode    String?
+  verified      Boolean        @default(false)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   profile       Profile?
@@ -30,14 +32,14 @@ model User {
 }
 
 model Profile {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId     String   @unique @db.ObjectId
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String    @unique @db.ObjectId
   gender     String?
   dob        DateTime?
   address    String?
-  locationId String?  @db.ObjectId
+  locationId String?   @db.ObjectId
   location   Location? @relation(fields: [locationId], references: [id])
-  user       User     @relation(fields: [userId], references: [id])
+  user       User      @relation(fields: [userId], references: [id])
 }
 
 enum Role {
@@ -58,8 +60,8 @@ model Token {
 // ========== DOCTOR MGMT ==========
 
 model Doctor {
-  id             String         @id @default(auto()) @map("_id") @db.ObjectId
-  userId         String         @unique @db.ObjectId
+  id             String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String           @unique @db.ObjectId
   specialization String[]
   qualifications String[]
   ratings        Float?
@@ -67,7 +69,7 @@ model Doctor {
   availability   Availability[]
   affiliations   DoctorHospital[]
   appointments   Appointment[]
-  user           User           @relation(fields: [userId], references: [id])
+  user           User             @relation(fields: [userId], references: [id])
 }
 
 model DoctorHospital {
