@@ -1,21 +1,21 @@
-import { EmailResult } from "../types/email";
-import { transporter } from "../utils/nodemailer";
-
-export const sendVerificationEmail = async (email: string, code: string): Promise<EmailResult> => {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.verificationEmailTemplate = exports.sendVerificationEmail = void 0;
+const nodemailer_1 = require("../utils/nodemailer");
+const sendVerificationEmail = async (email, code) => {
     try {
-        await transporter.verify();
-
-        const info = await transporter.sendMail({
+        await nodemailer_1.transporter.verify();
+        const info = await nodemailer_1.transporter.sendMail({
             from: `"Your App Name" <${process.env.EMAIL_FROM}>`,
             to: email,
             subject: 'Email Verification Code',
-            html: verificationEmailTemplate(code),
+            html: (0, exports.verificationEmailTemplate)(code),
             text: `Your verification code is: ${code}\n\nThis code will expire in 1 hour.`
         });
-
         console.log('Message sent: %s', info.messageId);
         return { success: true };
-    } catch (error) {
+    }
+    catch (error) {
         console.error('Email sending error:', error);
         return {
             success: false,
@@ -23,9 +23,8 @@ export const sendVerificationEmail = async (email: string, code: string): Promis
         };
     }
 };
-
-
-export const verificationEmailTemplate = (code: string) => `
+exports.sendVerificationEmail = sendVerificationEmail;
+const verificationEmailTemplate = (code) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -57,9 +56,10 @@ export const verificationEmailTemplate = (code: string) => `
             <p>This code will expire in 1 hour. If you didn't request this, please ignore this email.</p>
         </div>
         <div class="footer">
-            <p>&copy; ${new Date().getFullYear()}. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} Your Company Name. All rights reserved.</p>
         </div>
     </div>
 </body>
 </html>
 `;
+exports.verificationEmailTemplate = verificationEmailTemplate;

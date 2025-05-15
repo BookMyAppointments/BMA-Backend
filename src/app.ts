@@ -2,6 +2,9 @@ import express, { Application } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import authRoutes from './routes/userRoutes';
+import doctorRoutes from './routes/doctor.Routes';
+import hospitalRoutes from './routes/hospital';
+
 
 dotenv.config();
 const app  : Application = express();
@@ -14,9 +17,11 @@ app.use(cors({
 }))
 
 app.get('/', (req, res) => {
-    res.send('Hello, World!');
+    res.send('Hello, nishant!');
 });
 
 app.use("/api/v1/auth", authRoutes);
+app.use('/api/doctors', doctorRoutes);
+app.use('/api/hospitals', hospitalRoutes);
 
 export default app;

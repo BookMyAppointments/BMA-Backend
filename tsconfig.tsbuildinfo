@@ -1,0 +1,1 @@
+{"root":["./src/app.ts","./src/index.ts","./src/emails/verificationmail.ts","./src/lib/prisma.ts","./src/middlewares/authmiddleware.ts","./src/routes/userroutes.ts","./src/types/email.ts","./src/utils/asynchandler.ts","./src/utils/helpers.ts","./src/utils/nodemailer.ts","./src/utils/validators.ts"],"version":"5.8.3"}
