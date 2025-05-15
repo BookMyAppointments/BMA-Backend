@@ -2,23 +2,9 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middlewares/authMiddleware';
 import { asyncHandler } from '../utils/asyncHandler';
+import { isDoctor } from '../middlewares/doctor.middleware';
 
 const router = Router();
-
-export const isDoctor = asyncHandler(async (req: Request, res: Response, next) => {
-  const userId = (req as any).user.userId;
-  
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { role: true }
-  });
-
-  if (!user || user.role !== 'DOCTOR') {
-    return res.status(403).json({ message: "Access denied. Doctor role required." });
-  }
-
-  next();
-});
 
 //* Add hospital affiliation for current doctor
 router.post('/affiliations', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {

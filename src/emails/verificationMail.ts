@@ -6,7 +6,7 @@ export const sendVerificationEmail = async (email: string, code: string): Promis
         await transporter.verify();
 
         const info = await transporter.sendMail({
-            from: `"Your App Name" <${process.env.EMAIL_FROM}>`,
+            from: `"Your App Name" <${process.env.EMAIL}>`,
             to: email,
             subject: 'Email Verification Code',
             html: verificationEmailTemplate(code),

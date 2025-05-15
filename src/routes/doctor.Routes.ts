@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middlewares/authMiddleware';
 import { asyncHandler } from '../utils/asyncHandler';
 import { DoctorCreateInput, DoctorUpdateInput } from '../types/doctorTypes';
-import { isDoctor } from './doctor-hospital.routes';
+import { isDoctor } from '../middlewares/doctor.middleware';
 
 const router = Router();
 interface Review {
