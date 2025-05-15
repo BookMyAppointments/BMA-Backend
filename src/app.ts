@@ -4,8 +4,8 @@ import cors from 'cors';
 
 import authRoutes from './routes/user.routes';
 import doctorRoutes from './routes/doctor.Routes';
-import hospitalRoutes from './routes/hospital';
-
+import doctor_hospitalRoutes from './routes/doctor-hospital.routes';
+import hospitalRoutes from './routes/hospital.routes';
 
 dotenv.config();
 const app  : Application = express();
@@ -24,5 +24,6 @@ app.get('/', (req, res) => {
 app.use("/api/v1/auth", authRoutes);
 app.use('/api/doctors', doctorRoutes);
 app.use('/api/hospitals', hospitalRoutes);
+app.use('/api/doctor-hospitals', doctor_hospitalRoutes);
 
 export default app;

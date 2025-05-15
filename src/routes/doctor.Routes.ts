@@ -1,32 +1,14 @@
-// src/routes/doctor.user.ts
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middlewares/authMiddleware';
 import { asyncHandler } from '../utils/asyncHandler';
 import { DoctorCreateInput, DoctorUpdateInput } from '../types/doctorTypes';
+import { isDoctor } from './doctor-hospital.routes';
 
 const router = Router();
 interface Review {
   rating: number;
-  // other properties bhai mujhe samj nhi aaya or kya kya properties ho skti hai    ---Ankush??
 }
-
-
-const isDoctor = asyncHandler(async (req: Request, res: Response, next) => {
-  const userId = (req as any).user.userId;
-  
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { role: true }
-  });
-
-  if (!user || user.role !== 'DOCTOR') {
-    return res.status(403).json({ message: "Access denied. Doctor role required." });
-  }
-
-  next();
-});
-
 
 router.post('/', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
@@ -273,16 +255,13 @@ router.get('/appointments', authenticateToken, isDoctor, asyncHandler(async (req
   const appointments = await prisma.appointment.findMany({
     where: { doctorId: doctor.id },
     include: {
-      patient: {
+      user: {
         select: {
           id: true,
           name: true,
           phone: true
         }
       }
-    },
-    orderBy: {
-      date : 'asc'
     }
   });
 
@@ -326,7 +305,7 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
 
   let averageRating = null;
   if (doctor.reviews.length > 0) {
-    const total = doctor.reviews.reduce((sum : number , review : Review  ) => sum + review.rating, 0);
+    const total = doctor.reviews.reduce((sum: number, review: Review) => sum + review.rating, 0);
     averageRating = total / doctor.reviews.length;
   }
 

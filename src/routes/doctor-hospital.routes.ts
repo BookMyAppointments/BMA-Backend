@@ -1,4 +1,3 @@
-// src/routes/hospital.ts
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middlewares/authMiddleware';
@@ -6,8 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
-// Middleware to check if user is a doctor
-const isDoctor = asyncHandler(async (req: Request, res: Response, next) => {
+export const isDoctor = asyncHandler(async (req: Request, res: Response, next) => {
   const userId = (req as any).user.userId;
   
   const user = await prisma.user.findUnique({
@@ -22,7 +20,7 @@ const isDoctor = asyncHandler(async (req: Request, res: Response, next) => {
   next();
 });
 
-// Add hospital affiliation 
+//* Add hospital affiliation for current doctor
 router.post('/affiliations', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
   const { hospitalId } = req.body;
@@ -131,14 +129,18 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
   const hospitals = await prisma.hospital.findMany({
     include: {
       doctors: {
-        include: {
+        include : {
           doctor: {
             include: {
               user: {
                 select: {
-                  name: true
+                  id: true,
+                  name: true,
+                  profile: true
                 }
-              }
+              },
+              availability: true,
+              reviews: true
             }
           }
         }
@@ -181,36 +183,6 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
   }
 
   res.status(200).json(hospital);
-}));
-
-// Create hospital (admin only - optional)
-router.post('/', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-  const userId = (req as any).user.userId;
-  const { name, address, contact, facilities } = req.body;
-
-  // Check if user is admin
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { role: true }
-  });
-
-  if (!user || user.role !== 'ADMIN') {
-    return res.status(403).json({ message: "Access denied. Admin role required." });
-  }
-
-  const hospital = await prisma.hospital.create({
-    data: {
-      name,
-      address: address || null,
-      contact: contact || null,
-      facilities: facilities || []
-    }
-  });
-
-  res.status(201).json({
-    message: "Hospital created successfully",
-    hospital
-  });
 }));
 
 export default router;
