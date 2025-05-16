@@ -12,6 +12,7 @@ const razorpay = new Razorpay({
     key_secret: process.env.RAZORPAY_KEY_SECRET!,
 });
 
+//* Create a new order
 router.post('/create-order', asyncHandler(async (req, res) => {
     try {
         const { userId, amount, method } = req.body;
@@ -53,6 +54,7 @@ router.post('/create-order', asyncHandler(async (req, res) => {
     }
 }));
 
+//* Verify the payment
 router.post('/verify', asyncHandler(async (req, res) => {
     try {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature, paymentId } = req.body;

@@ -65,6 +65,7 @@ model Doctor {
   specialization String[]
   qualifications String[]
   ratings        Float?
+  price          Float
   reviews        Review[]
   availability   Availability[]
   affiliations   DoctorHospital[]

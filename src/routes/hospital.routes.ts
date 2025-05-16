@@ -1,15 +1,15 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
-import { authenticateToken } from '../middlewares/authMiddleware';
+import { authenticateToken } from '../middlewares/auth.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
+import { isAdmin } from '../middlewares/admin.middleware';
 
 const router = Router();
 
-//  HOSPITAL CRUD OPERATIONS (saare points cover hai --- facility/department/hour )
+//* --------------------- HOSPITAL CRUD OPERATIONS ---------------------
 
-// Create a new hospital (Admin only)
-router.post('/', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user.userId;
+//* Create a new hospital (Admin only)
+router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     const { 
         name, 
         departments, 
@@ -18,16 +18,6 @@ router.post('/', authenticateToken, asyncHandler(async (req: Request, res: Respo
         hours, 
         location 
     } = req.body;
-
-    // Verify admin role
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { role: true }
-    });
-
-    if (!user || user.role !== 'ADMIN') {
-        return res.status(403).json({ message: "Access denied. Admin role required." });
-    }
 
     // Create location first
     const newLocation = await prisma.location.create({
@@ -61,8 +51,8 @@ router.post('/', authenticateToken, asyncHandler(async (req: Request, res: Respo
     });
 }));
 
-// Get all hospitals (KOI BHI KR SAKTA HAI USE)
-router.get('/', asyncHandler(async (req: Request, res: Response) => {
+//* Get all hospitals (KOI BHI KR SAKTA HAI USE)
+router.get('/get', asyncHandler(async (req: Request, res: Response) => {
     const { department, service } = req.query;
     
     const where: any = {};
@@ -108,8 +98,8 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
     res.status(200).json(hospitals);
 }));
 
-// Get hospital by ID
-router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
+//* Get hospital by ID
+router.get('/get/:id', asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
     const hospital = await prisma.hospital.findUnique({
@@ -148,9 +138,8 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
     res.status(200).json(hospital);
 }));
 
-// Update hospital (Admin only)
-router.put('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user.userId;
+//* Update hospital (Admin only)
+router.put('/update/:id', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const { 
         name, 
@@ -160,16 +149,6 @@ router.put('/:id', authenticateToken, asyncHandler(async (req: Request, res: Res
         hours, 
         location 
     } = req.body;
-
-    // Verify admin role
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { role: true }
-    });
-
-    if (!user || user.role !== 'ADMIN') {
-        return res.status(403).json({ message: "Access denied. Admin role required." });
-    }
 
     // Get hospital to update
     const hospital = await prisma.hospital.findUnique({
@@ -214,20 +193,9 @@ router.put('/:id', authenticateToken, asyncHandler(async (req: Request, res: Res
     });
 }));
 
-// Delete hospital (Admin only)
-router.delete('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user.userId;
+//* Delete hospital (Admin only)
+router.delete('/delete/:id', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-
-    // Verify admin role
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { role: true }
-    });
-
-    if (!user || user.role !== 'ADMIN') {
-        return res.status(403).json({ message: "Access denied. Admin role required." });
-    }
 
     // Get hospital to delete (with location)
     const hospital = await prisma.hospital.findUnique({
@@ -249,213 +217,6 @@ router.delete('/:id', authenticateToken, asyncHandler(async (req: Request, res: 
     });
 
     res.status(200).json({ message: "Hospital deleted successfully" });
-}));
-
-// LAB CRUD OPERATIONS 
-
-// Create a new lab (Admin only)
-router.post('/:hospitalId/labs', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user.userId;
-    const { hospitalId } = req.params;
-    const { 
-        name, 
-        services, 
-        location 
-    } = req.body;
-
-    // Verify admin role
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { role: true }
-    });
-
-    if (!user || user.role !== 'ADMIN') {
-        return res.status(403).json({ message: "Access denied. Admin role required." });
-    }
-
-    // Check if hospital exists
-    const hospital = await prisma.hospital.findUnique({
-        where: { id: hospitalId }
-    });
-
-    if (!hospital) {
-        return res.status(404).json({ message: "Hospital not found" });
-    }
-
-    // Create location first
-    const newLocation = await prisma.location.create({
-        data: {
-            lat: location.lat,
-            lng: location.lng,
-            address: location.address
-        }
-    });
-
-    // Create lab with location
-    const lab = await prisma.lab.create({
-        data: {
-            name,
-            services: services || [],
-            hospital: {
-                connect: { id: hospitalId }
-            },
-            location: {
-                connect: { id: newLocation.id }
-            }
-        },
-        include: {
-            location: true,
-            hospital: true
-        }
-    });
-
-    res.status(201).json({
-        message: "Lab created successfully",
-        lab
-    });
-}));
-
-// Get all labs for a hospital (public)
-router.get('/:hospitalId/labs', asyncHandler(async (req: Request, res: Response) => {
-    const { hospitalId } = req.params;
-    const { service } = req.query;
-
-    const where: any = {
-        hospitalId
-    };
-
-    if (service) {
-        where.services = {
-            has: service as string
-        };
-    }
-
-    const labs = await prisma.lab.findMany({
-        where,
-        include: {
-            location: true,
-            hospital: true
-        }
-    });
-
-    res.status(200).json(labs);
-}));
-
-// Get lab by ID 
-router.get('/labs/:id', asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-
-    const lab = await prisma.lab.findUnique({
-        where: { id },
-        include: {
-            location: true,
-            hospital: true
-        }
-    });
-
-    if (!lab) {
-        return res.status(404).json({ message: "Lab not found" });
-    }
-
-    res.status(200).json(lab);
-}));
-
-// Update lab (Admin only)
-router.put('/labs/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user.userId;
-    const { id } = req.params;
-    const { 
-        name, 
-        services, 
-        location 
-    } = req.body;
-
-    // Verify admin role
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { role: true }
-    });
-
-    if (!user || user.role !== 'ADMIN') {
-        return res.status(403).json({ message: "Access denied. Admin role required." });
-    }
-
-    // Get lab to update
-    const lab = await prisma.lab.findUnique({
-        where: { id },
-        include: { location: true }
-    });
-
-    if (!lab) {
-        return res.status(404).json({ message: "Lab not found" });
-    }
-
-    // Update location if provided
-    if (location) {
-        await prisma.location.update({
-            where: { id: lab.locationId },
-            data: {
-                lat: location.lat,
-                lng: location.lng,
-                address: location.address
-            }
-        });
-    }
-
-    // Update lab
-    const updatedLab = await prisma.lab.update({
-        where: { id },
-        data: {
-            name,
-            services: services || lab.services
-        },
-        include: {
-            location: true,
-            hospital: true
-        }
-    });
-
-    res.status(200).json({
-        message: "Lab updated successfully",
-        lab: updatedLab
-    });
-}));
-
-// Delete lab (Admin only)
-router.delete('/labs/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user.userId;
-    const { id } = req.params;
-
-    // Verify admin role
-    const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { role: true }
-    });
-
-    if (!user || user.role !== 'ADMIN') {
-        return res.status(403).json({ message: "Access denied. Admin role required." });
-    }
-
-    // Get lab to delete (with location)
-    const lab = await prisma.lab.findUnique({
-        where: { id },
-        include: { location: true }
-    });
-
-    if (!lab) {
-        return res.status(404).json({ message: "Lab not found" });
-    }
-
-    // Delete lab and its location
-    await prisma.lab.delete({
-        where: { id }
-    });
-
-    await prisma.location.delete({
-        where: { id: lab.locationId }
-    });
-
-    res.status(200).json({ message: "Lab deleted successfully" });
 }));
 
 export default router;

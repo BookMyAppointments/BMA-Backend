@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma';
 import bcrypt from 'bcryptjs';
 import { sendVerificationEmail } from "../emails/verificationMail";
 import jwt from 'jsonwebtoken';
-import { authenticateToken } from '../middlewares/authMiddleware';
+import { authenticateToken } from '../middlewares/auth.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
 import { generateVerificationCode } from '../utils/helpers';
 

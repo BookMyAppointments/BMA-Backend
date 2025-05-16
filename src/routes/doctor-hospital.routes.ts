@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
-import { authenticateToken } from '../middlewares/authMiddleware';
+import { authenticateToken } from '../middlewares/auth.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
 import { isDoctor } from '../middlewares/doctor.middleware';
 

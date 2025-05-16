@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
-import { authenticateToken } from '../middlewares/authMiddleware';
+import { authenticateToken } from '../middlewares/auth.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
 import { DoctorCreateInput, DoctorUpdateInput } from '../types/doctorTypes';
 import { isDoctor } from '../middlewares/doctor.middleware';
@@ -10,7 +10,8 @@ interface Review {
   rating: number;
 }
 
-router.post('/', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
+//* Add a new doctor profile
+router.post('/create', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
   const { specialization, qualifications }: DoctorCreateInput = req.body;
 
@@ -46,7 +47,7 @@ router.post('/', authenticateToken, isDoctor, asyncHandler(async (req: Request, 
   });
 }));
 
-// Get doc profile 
+//* Get doc profile 
 router.get('/profile', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
 
@@ -58,7 +59,8 @@ router.get('/profile', authenticateToken, isDoctor, asyncHandler(async (req: Req
           id: true,
           name: true,
           email: true,
-          phone: true
+          phone: true,
+          
         }
       },
       availability: true

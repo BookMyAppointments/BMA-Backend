@@ -6,6 +6,7 @@ import authRoutes from './routes/user.routes';
 import doctorRoutes from './routes/doctor.routes';
 import doctor_hospitalRoutes from './routes/doctor-hospital.routes';
 import hospitalRoutes from './routes/hospital.routes';
+import labRoutes from './routes/lab.routes';
 import searchRoutes from './routes/search.routes';
 import paymentRouter from './routes/payment.routes';
 
@@ -23,12 +24,13 @@ app.get('/', (req, res) => {
     res.send('Hello, nishant!');
 });
 
-app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/auth", authRoutes); //* all-verified
+app.use('/api/v1/hospitals', hospitalRoutes); //* all-verified
+app.use('/api/v1/labs', labRoutes); //* all-verified
 app.use('/api/v1/doctors', doctorRoutes);
-app.use('/api/v1/hospitals', hospitalRoutes);
 app.use('/api/v1/doctor-hospitals', doctor_hospitalRoutes);
-app.use('/api/v1/payment', paymentRouter);
-app.use('/api/v1/search', searchRoutes );
+app.use('/api/v1/payment', paymentRouter); //* all-verified
+app.use('/api/v1/search', searchRoutes);
 
 
 export default app;
