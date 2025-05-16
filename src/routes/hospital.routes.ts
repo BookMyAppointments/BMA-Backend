@@ -6,7 +6,7 @@ import { isAdmin } from '../middlewares/admin.middleware';
 
 const router = Router();
 
-//* --------------------- HOSPITAL CRUD OPERATIONS ---------------------
+//* --------------------- HOSPITAL CRUD OPERATIONS --------------------- *//
 
 //* Create a new hospital (Admin only)
 router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {

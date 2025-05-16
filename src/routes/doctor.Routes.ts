@@ -47,6 +47,8 @@ router.post('/create', authenticateToken, isDoctor, asyncHandler(async (req: Req
   });
 }));
 
+//* ------------------ Doctor Profile ------------------ *//
+
 //* Get doc profile 
 router.get('/profile', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
@@ -63,6 +65,19 @@ router.get('/profile', authenticateToken, isDoctor, asyncHandler(async (req: Req
           
         }
       },
+      reviews : {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      },
       availability: true
     }
   });
@@ -74,7 +89,7 @@ router.get('/profile', authenticateToken, isDoctor, asyncHandler(async (req: Req
   res.status(200).json(doctor);
 }));
 
-// Update doc profile
+//* Update doc profile
 router.put('/profile', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
   const { specialization, qualifications, ratings }: DoctorUpdateInput = req.body;
@@ -104,20 +119,22 @@ router.put('/profile', authenticateToken, isDoctor, asyncHandler(async (req: Req
   });
 }));
 
-// Add availability slots
+//* ---------------------- Doctor Profile ------------------ *//
+
+//* Add availability slots
 router.post('/availability', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
   const { day, startTime, endTime } = req.body;
-
+  
   const doctor = await prisma.doctor.findUnique({
     where: { userId },
     select: { id: true }
   });
-
+  
   if (!doctor) {
     return res.status(404).json({ message: "Doctor profile not found" });
   }
-
+  
   const existingAvailability = await prisma.availability.findFirst({
     where: {
       doctorId: doctor.id,
@@ -138,11 +155,11 @@ router.post('/availability', authenticateToken, isDoctor, asyncHandler(async (re
       ]
     }
   });
-
+  
   if (existingAvailability) {
     return res.status(400).json({ message: "Time slot overlaps with existing availability" });
   }
-
+  
   const availability = await prisma.availability.create({
     data: {
       doctorId: doctor.id,
@@ -151,74 +168,76 @@ router.post('/availability', authenticateToken, isDoctor, asyncHandler(async (re
       endTime
     }
   });
-
+  
   res.status(201).json({
     message: "Availability added successfully",
     availability
   });
 }));
 
-// Get all availability slots
+//* Get all availability slots
 router.get('/availability', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
-
+  
   const doctor = await prisma.doctor.findUnique({
     where: { userId },
     select: { id: true }
   });
-
+  
   if (!doctor) {
     return res.status(404).json({ message: "Doctor profile not found" });
   }
-
+  
   const availability = await prisma.availability.findMany({
     where: { doctorId: doctor.id }
   });
-
+  
   res.status(200).json(availability);
 }));
 
-// Delete availability slot
+//* Delete availability slot
 router.delete('/availability/:id', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
   const { id } = req.params;
-
+  
   const doctor = await prisma.doctor.findUnique({
     where: { userId },
     select: { id: true }
   });
-
+  
   if (!doctor) {
     return res.status(404).json({ message: "Doctor profile not found" });
   }
-
+  
   const availability = await prisma.availability.findFirst({
     where: {
       id,
       doctorId: doctor.id
     }
   });
-
+  
   if (!availability) {
     return res.status(404).json({ message: "Availability not found or not authorized" });
   }
-
+  
   await prisma.availability.delete({
     where: { id }
   });
-
+  
   res.status(200).json({ message: "Availability deleted successfully" });
 }));
 
-// -->  Get all reviews for doctor
+//* ---------------------- Doctor Reviews & Appointments ------------------ *//
+
+//*   Get all reviews for doctor
 router.get('/reviews', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
-
+  
   const doctor = await prisma.doctor.findUnique({
     where: { userId },
     select: { id: true }
   });
-
+  
   if (!doctor) {
     return res.status(404).json({ message: "Doctor profile not found" });
   }
@@ -241,7 +260,7 @@ router.get('/reviews', authenticateToken, isDoctor, asyncHandler(async (req: Req
   res.status(200).json(reviews);
 }));
 
-// Get doc appointments
+//* Get doc appointments
 router.get('/appointments', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;
 
@@ -270,7 +289,7 @@ router.get('/appointments', authenticateToken, isDoctor, asyncHandler(async (req
   res.status(200).json(appointments);
 }));
 
-//  route to get doctor details
+//* Complete doctor details
 router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 

@@ -27,8 +27,8 @@ app.get('/', (req, res) => {
 app.use("/api/v1/auth", authRoutes); //* all-verified
 app.use('/api/v1/hospitals', hospitalRoutes); //* all-verified
 app.use('/api/v1/labs', labRoutes); //* all-verified
-app.use('/api/v1/doctors', doctorRoutes);
-app.use('/api/v1/doctor-hospitals', doctor_hospitalRoutes);
+app.use('/api/v1/doctors', doctorRoutes); //* all-verified
+app.use('/api/v1/doctor-hospitals', doctor_hospitalRoutes); //* all-verified
 app.use('/api/v1/payment', paymentRouter); //* all-verified
 app.use('/api/v1/search', searchRoutes);
 

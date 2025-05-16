@@ -7,10 +7,9 @@ import { AppointmentStatus, Hospital } from '@prisma/client';
 
 const router = Router();
 
-//  ---->  SEARCH & FILTER OPERATIONS 
+//* SEARCH & FILTER OPERATIONS
 
-
-// Search doctors by name/specialization
+//* Search doctors by name/specialization
 router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
     const { name, specialization, hospitalId } = req.query;
 
@@ -110,7 +109,7 @@ router.get('/hospitals/search', asyncHandler(async (req: Request, res: Response)
     res.status(200).json(hospitals);
 }));
 
-// Search tests by name/category
+//* Search tests by name/category
 router.get('/tests', asyncHandler(async (req: Request, res: Response) => {
     const { name, category, labId } = req.query;
 
