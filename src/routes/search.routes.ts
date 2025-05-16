@@ -2,7 +2,8 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middlewares/authMiddleware';
 import { asyncHandler } from '../utils/asyncHandler';
-import {calculateDistance} from '../utils/helpers'
+import { calculateDistance } from '../utils/helpers'
+import { AppointmentStatus, Hospital } from '@prisma/client';
 
 const router = Router();
 
@@ -12,7 +13,7 @@ const router = Router();
 // Search doctors by name/specialization
 router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
     const { name, specialization, hospitalId } = req.query;
-    
+
     const where: any = {
         doctor: {
             user: {
@@ -26,7 +27,7 @@ router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
         where.hospitalId = hospitalId as string;
     }
 
-    const doctors = await prisma.DoctorHospital.findMany({
+    const doctors = await prisma.doctorHospital.findMany({
         where,
         include: {
             doctor: {
@@ -57,14 +58,14 @@ router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
 // Search hospitals by name/location (with distance filtering but cordinates required ...latitude and longitude ) ---
 router.get('/hospitals/search', asyncHandler(async (req: Request, res: Response) => {
     const { name, lat, lng, radius, department, service } = req.query;
-    
+
     const where: any = {
         name: name ? { contains: name as string, mode: 'insensitive' } : undefined,
         departments: department ? { has: department as string } : undefined,
         services: service ? { has: service as string } : undefined
     };
 
-    let hospitals = await prisma.Hospital.findMany({
+    let hospitals = await prisma.hospital.findMany({
         where,
         include: {
             location: true,
@@ -94,14 +95,14 @@ router.get('/hospitals/search', asyncHandler(async (req: Request, res: Response)
 
         hospitals = hospitals.filter(hospital => {
             if (!hospital.location) return false;
-            
+
             const distance = calculateDistance(
                 userLat,
                 userLng,
                 hospital.location.lat,
                 hospital.location.lng
             );
-            
+
             return distance <= searchRadius;
         });
     }
@@ -112,14 +113,14 @@ router.get('/hospitals/search', asyncHandler(async (req: Request, res: Response)
 // Search tests by name/category
 router.get('/tests', asyncHandler(async (req: Request, res: Response) => {
     const { name, category, labId } = req.query;
-    
+
     const where: any = {
         name: name ? { contains: name as string, mode: 'insensitive' } : undefined,
         category: category ? { contains: category as string, mode: 'insensitive' } : undefined,
         labId: labId ? labId as string : undefined
     };
 
-    const tests = await prisma.MedicalTest.findMany({
+    const tests = await prisma.medicalTest.findMany({
         where,
         include: {
             lab: {
@@ -138,26 +139,22 @@ router.get('/tests', asyncHandler(async (req: Request, res: Response) => {
 router.get('/appointments', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).user.userId;
     const { status } = req.query;
-    
-    const where: any = {
+
+    const where = {
         OR: [
-            { patient: { userId } },
-            { lab: { hospital: { doctors: { some: { doctor: { userId } } } } } }
+            { userId },
+            { doctor: { userId } }
         ],
-        status: status ? status as string : undefined
+        status: status ? status as AppointmentStatus : undefined
     };
 
-    const appointments = await prisma.Appointment.findMany({
+    const appointments = await prisma.appointment.findMany({
         where,
         include: {
-            patient: {
-                include: {
-                    user: {
-                        select: {
-                            id: true,
-                            name: true
-                        }
-                    }
+            user: {
+                select: {
+                    id: true,
+                    name: true
                 }
             },
             doctor: {
@@ -177,9 +174,6 @@ router.get('/appointments', authenticateToken, asyncHandler(async (req: Request,
                 }
             },
             test: true
-        },
-        orderBy: {
-            date: 'asc'
         }
     });
 
@@ -189,7 +183,7 @@ router.get('/appointments', authenticateToken, asyncHandler(async (req: Request,
 // Location-based search for all entities
 router.get('/nearby', asyncHandler(async (req: Request, res: Response) => {
     const { lat, lng, radius, type } = req.query;
-    
+
     if (!lat || !lng || !radius) {
         return res.status(400).json({ message: "Latitude, longitude and radius are required" });
     }
@@ -202,7 +196,7 @@ router.get('/nearby', asyncHandler(async (req: Request, res: Response) => {
 
     // Search hospitals if type is not specified or includes hospitals
     if (!type || (type as string).includes('hospitals')) {
-        const hospitals = await prisma.Hospital.findMany({
+        const hospitals = await prisma.hospital.findMany({
             include: {
                 location: true,
                 doctors: true,
@@ -210,23 +204,23 @@ router.get('/nearby', asyncHandler(async (req: Request, res: Response) => {
             }
         });
 
-        results.hospitals = hospitals.filter(hospital => {
-            if (!hospital.location) return false;
-            
+        results.hospitals = hospitals.filter((hospital: any) => {
+            if (!hospital.locationId) return false;
+
             const distance = calculateDistance(
                 userLat,
                 userLng,
                 hospital.location.lat,
                 hospital.location.lng
             );
-            
+
             return distance <= searchRadius;
         });
     }
 
     // Search labs if type is not specified or includes labs
     if (!type || (type as string).includes('labs')) {
-        const labs = await prisma.Lab.findMany({
+        const labs = await prisma.lab.findMany({
             include: {
                 location: true,
                 hospital: true
@@ -235,21 +229,21 @@ router.get('/nearby', asyncHandler(async (req: Request, res: Response) => {
 
         results.labs = labs.filter(lab => {
             if (!lab.location) return false;
-            
+
             const distance = calculateDistance(
                 userLat,
                 userLng,
                 lab.location.lat,
                 lab.location.lng
             );
-            
+
             return distance <= searchRadius;
         });
     }
 
     // Search doctors if type is not specified or includes doctors
     if (!type || (type as string).includes('doctors')) {
-        const doctorAffiliations = await prisma.DoctorHospital.findMany({
+        const doctorAffiliations = await prisma.doctorHospital.findMany({
             include: {
                 doctor: {
                     include: {
@@ -272,14 +266,14 @@ router.get('/nearby', asyncHandler(async (req: Request, res: Response) => {
 
         results.doctors = doctorAffiliations.filter(affiliation => {
             if (!affiliation.hospital.location) return false;
-            
+
             const distance = calculateDistance(
                 userLat,
                 userLng,
                 affiliation.hospital.location.lat,
                 affiliation.hospital.location.lng
             );
-            
+
             return distance <= searchRadius;
         });
     }
