@@ -93,12 +93,14 @@ model Review {
 }
 
 model Availability {
-  id        String @id @default(auto()) @map("_id") @db.ObjectId
-  doctorId  String @db.ObjectId
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  doctorId  String  @db.ObjectId
   day       String
   startTime String
   endTime   String
-  doctor    Doctor @relation(fields: [doctorId], references: [id])
+  doctor    Doctor  @relation(fields: [doctorId], references: [id])
+  Lab       Lab?    @relation(fields: [labId], references: [id])
+  labId     String? @db.ObjectId
 }
 
 // ========== HOSPITAL/LAB MGMT ==========
@@ -117,15 +119,16 @@ model Hospital {
 }
 
 model Lab {
-  id          String        @id @default(auto()) @map("_id") @db.ObjectId
-  hospitalId  String        @db.ObjectId
-  name        String
-  services    String[]
-  locationId  String        @db.ObjectId
-  location    Location      @relation(fields: [locationId], references: [id])
-  tests       MedicalTest[]
-  hospital    Hospital      @relation(fields: [hospitalId], references: [id])
-  Appointment Appointment[]
+  id           String         @id @default(auto()) @map("_id") @db.ObjectId
+  hospitalId   String         @db.ObjectId
+  name         String
+  services     String[]
+  locationId   String         @db.ObjectId
+  availability Availability[]
+  location     Location       @relation(fields: [locationId], references: [id])
+  tests        MedicalTest[]
+  hospital     Hospital       @relation(fields: [hospitalId], references: [id])
+  Appointment  Appointment[]
 }
 
 // ========== LOCATION ==========

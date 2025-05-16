@@ -2,33 +2,18 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middlewares/auth.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
-import {sendNotification} from '../utils/notification.service'
-
-
-
-
-// Type definitions for operating hours and availability
-interface OperatingHour {
-    dayOfWeek: number;
-    startHour: number;
-    endHour: number;
-}
-
-interface DoctorAvailability {
-    dayOfWeek: number;
-    startTime: Date;
-    endTime: Date;
-}
+import { sendNotification } from '../utils/notification.service';
+import { Availability } from '@prisma/client';
 
 const router = Router();
 
-// Create a new appointment (doctor or lab test)
-router.post('/', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+//* Create a new appointment (doctor or lab test)
+router.post('/create', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const userId = (req as any).user.userId;
         const { doctorId, labId, testId, scheduledAt } = req.body;
 
-        // Validation
+        // Basic validation
         if (!scheduledAt) {
             return res.status(400).json({ message: "Scheduled time is required" });
         }
@@ -44,12 +29,11 @@ router.post('/', authenticateToken, asyncHandler(async (req: Request, res: Respo
         const appointmentTime = new Date(scheduledAt);
         const now = new Date();
 
-        // Validate appointment time is in the future
         if (appointmentTime <= now) {
             return res.status(400).json({ message: "Appointment time must be in the future" });
         }
 
-        // Check for existing appointments at the same time
+        // Check for user's existing appointments
         const existingAppointment = await prisma.appointment.findFirst({
             where: {
                 userId,
@@ -64,74 +48,70 @@ router.post('/', authenticateToken, asyncHandler(async (req: Request, res: Respo
             return res.status(400).json({ message: "You already have an appointment at this time" });
         }
 
-        // Check availability
+        // Doctor appointment validation
         if (doctorId) {
-            const doctorAvailability = await prisma.doctorAvailability.findFirst({
-                where: {
-                    doctorId,
-                    dayOfWeek: appointmentTime.getDay(),
-                    startTime: { lte: appointmentTime },
-                    endTime: { gte: new Date(appointmentTime.getTime() + 30 * 60000) }
-                }
+            const doctor = await prisma.doctor.findUnique({
+                where: { id: doctorId },
+                include: { availability: true }
             });
 
-            if (!doctorAvailability) {
+            if (!doctor) {
+                return res.status(404).json({ message: "Doctor not found" });
+            }
+
+            const dayOfWeek = appointmentTime.getDay().toString();
+            const timeStr = appointmentTime.toTimeString().slice(0, 5); // HH:mm format
+
+            const doctorAvailable = doctor.availability.some(slot => 
+                slot.day === dayOfWeek &&
+                slot.startTime <= timeStr &&
+                slot.endTime >= timeStr
+            );
+
+            if (!doctorAvailable) {
                 return res.status(400).json({ message: "Doctor is not available at this time" });
             }
 
-            const overlappingAppointment = await prisma.appointment.findFirst({
+            // Check for doctor's existing appointments
+            const doctorExistingAppointment = await prisma.appointment.findFirst({
                 where: {
                     doctorId,
                     scheduledAt: appointmentTime,
-                    status: {
-                        in: ['PENDING', 'CONFIRMED']
-                    }
+                    status: { in: ['PENDING', 'CONFIRMED'] }
                 }
             });
 
-            if (overlappingAppointment) {
+            if (doctorExistingAppointment) {
                 return res.status(400).json({ message: "This time slot is already booked" });
             }
-        } else if (labId) {
+        }
+
+        // Lab appointment validation
+        if (labId) {
             const lab = await prisma.lab.findUnique({
                 where: { id: labId },
-                include: { operatingHours: true }
+                include: { availability: true }
             });
 
             if (!lab) {
                 return res.status(404).json({ message: "Lab not found" });
             }
 
-            const operatingDay = lab.operatingHours.find(
-                (oh: OperatingHour) => oh.dayOfWeek === appointmentTime.getDay()
+            const dayOfWeek = appointmentTime.getDay().toString();
+            const timeStr = appointmentTime.toTimeString().slice(0, 5);
+
+            const labAvailable = lab.availability.some(slot =>
+                slot.day === dayOfWeek &&
+                slot.startTime <= timeStr &&
+                slot.endTime >= timeStr
             );
 
-            if (!operatingDay || 
-                appointmentTime.getHours() < operatingDay.startHour || 
-                (appointmentTime.getHours() === operatingDay.endHour && appointmentTime.getMinutes() > 0) ||
-                appointmentTime.getHours() > operatingDay.endHour) {
-                return res.status(400).json({ message: "Lab is closed at this time" });
-            }
-
-            const concurrentAppointments = await prisma.appointment.count({
-                where: {
-                    labId,
-                    scheduledAt: {
-                        gte: new Date(appointmentTime.getTime() - 14 * 60000),
-                        lte: new Date(appointmentTime.getTime() + 14 * 60000)
-                    },
-                    status: {
-                        in: ['PENDING', 'CONFIRMED']
-                    }
-                }
-            });
-
-            if (concurrentAppointments >= lab.simultaneousAppointments) {
-                return res.status(400).json({ message: "Lab is fully booked at this time" });
+            if (!labAvailable) {
+                return res.status(400).json({ message: "Lab is not available at this time" });
             }
         }
 
-        // Create the appointment
+        // Create appointment
         const appointment = await prisma.appointment.create({
             data: {
                 userId,
@@ -139,32 +119,16 @@ router.post('/', authenticateToken, asyncHandler(async (req: Request, res: Respo
                 labId,
                 testId,
                 scheduledAt: appointmentTime,
-                status: 'PENDING'
+                status: doctorId ? 'PENDING' : 'CONFIRMED'
             },
             include: {
-                user: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true
-                    }
-                },
+                user: true,
                 doctor: {
                     include: {
-                        user: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true
-                            }
-                        }
+                        user: true
                     }
                 },
-                lab: {
-                    include: {
-                        hospital: true
-                    }
-                },
+                lab: true,
                 test: true
             }
         });
@@ -209,8 +173,8 @@ router.post('/', authenticateToken, asyncHandler(async (req: Request, res: Respo
     }
 }));
 
-// Confirm a pending appointment (for doctors)
-router.patch('/:id/confirm', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+//* Confirm a pending appointment (for doctors)
+router.patch('/confirm/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const userId = (req as any).user.userId;
@@ -272,8 +236,8 @@ router.patch('/:id/confirm', authenticateToken, asyncHandler(async (req: Request
     }
 }));
 
-// Reschedule an appointment
-router.patch('/:id/reschedule', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+//* Reschedule an appointment
+router.patch('/reschedule/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const userId = (req as any).user.userId;
@@ -302,9 +266,10 @@ router.patch('/:id/reschedule', authenticateToken, asyncHandler(async (req: Requ
                 },
                 lab: {
                     include: {
-                        operatingHours: true
+                        availability: true
                     }
-                }
+                },
+                test: true
             }
         });
 
@@ -326,9 +291,15 @@ router.patch('/:id/reschedule', authenticateToken, asyncHandler(async (req: Requ
 
         if (appointment.doctorId) {
             const doctorAvailability = appointment.doctor?.availability.find(
-                (av: DoctorAvailability) => av.dayOfWeek === newAppointmentTime.getDay() &&
-                    av.startTime <= newAppointmentTime &&
-                    av.endTime >= new Date(newAppointmentTime.getTime() + 30 * 60000)
+                (av: Availability) => {
+                    const [hours, minutes] = av.endTime.split(':').map(Number);
+                    const endTimeDate = new Date(newAppointmentTime);
+                    endTimeDate.setHours(hours, minutes, 0, 0);
+                    
+                    return av.day === newAppointmentTime.getDay().toString() &&
+                        av.startTime <= newAppointmentTime.toTimeString().slice(0, 5) &&
+                        endTimeDate >= new Date(newAppointmentTime.getTime() + 30 * 60000);
+                }
             );
 
             if (!doctorAvailability) {
@@ -352,14 +323,16 @@ router.patch('/:id/reschedule', authenticateToken, asyncHandler(async (req: Requ
                 return res.status(400).json({ message: "Doctor already has an appointment at the new time" });
             }
         } else if (appointment.labId) {
-            const operatingDay = appointment.lab?.operatingHours.find(
-                (oh: OperatingHour) => oh.dayOfWeek === newAppointmentTime.getDay()
+            const operatingDay = appointment.lab?.availability.find(
+                (slot) => slot.day === newAppointmentTime.getDay().toString()
             );
 
-            if (!operatingDay || 
-                newAppointmentTime.getHours() < operatingDay.startHour || 
-                (newAppointmentTime.getHours() === operatingDay.endHour && newAppointmentTime.getMinutes() > 0) ||
-                newAppointmentTime.getHours() > operatingDay.endHour) {
+            if (!operatingDay) {
+                return res.status(400).json({ message: "Lab is closed on this day" });
+            }
+
+            const timeStr = newAppointmentTime.toTimeString().slice(0, 5); // HH:mm format
+            if (timeStr < operatingDay.startTime || timeStr > operatingDay.endTime) {
                 return res.status(400).json({ message: "Lab is closed at the new time" });
             }
 
@@ -379,7 +352,9 @@ router.patch('/:id/reschedule', authenticateToken, asyncHandler(async (req: Requ
                 }
             });
 
-            if (concurrentAppointments >= appointment.lab?.simultaneousAppointments ) {
+            // Default to allowing 3 concurrent appointments if not specified
+            const maxConcurrent = process.env.MAX_ATTEMPTS_TO_BOOK ? parseInt(process.env.MAX_ATTEMPTS_TO_BOOK) : 3;
+            if (concurrentAppointments >= maxConcurrent) {
                 return res.status(400).json({ message: "Lab is fully booked at the new time" });
             }
         }
@@ -405,7 +380,7 @@ router.patch('/:id/reschedule', authenticateToken, asyncHandler(async (req: Requ
 
         try {
             if (appointment.doctorId) {
-                const notificationRecipient = userId === appointment.userId ? 
+                const notificationRecipient = userId === appointment.userId ?
                     appointment.doctor?.user.id! : appointment.userId;
 
                 await sendNotification({
@@ -433,8 +408,8 @@ router.patch('/:id/reschedule', authenticateToken, asyncHandler(async (req: Requ
     }
 }));
 
-// Cancel an appointment
-router.patch('/:id/cancel', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+//* Cancel an appointment
+router.patch('/cancel/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const userId = (req as any).user.userId;
@@ -490,7 +465,7 @@ router.patch('/:id/cancel', authenticateToken, asyncHandler(async (req: Request,
 
         try {
             if (appointment.doctorId) {
-                const notificationRecipient = userId === appointment.userId ? 
+                const notificationRecipient = userId === appointment.userId ?
                     appointment.doctor?.user.id! : appointment.userId;
 
                 await sendNotification({
@@ -518,7 +493,7 @@ router.patch('/:id/cancel', authenticateToken, asyncHandler(async (req: Request,
     }
 }));
 
-// Mark appointment as completed (for doctors)
+//* Mark appointment as completed (for doctors)
 router.patch('/:id/complete', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -585,8 +560,8 @@ router.patch('/:id/complete', authenticateToken, asyncHandler(async (req: Reques
     }
 }));
 
-// Get appointment details
-router.get('/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+//* Get appointment details
+router.get('/get/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const userId = (req as any).user.userId;
@@ -612,15 +587,17 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: Request, res: Res
                                 profile: true
                             }
                         },
-                        specialization: true,
                         reviews: true
+                    },
+                    select: {
+                        specialization: true,
                     }
                 },
                 lab: {
                     include: {
                         hospital: true,
                         location: true,
-                        operatingHours: true
+                        availability: true
                     }
                 },
                 test: true
@@ -642,8 +619,8 @@ router.get('/:id', authenticateToken, asyncHandler(async (req: Request, res: Res
     }
 }));
 
-// Get availability slots for a doctor
-router.get('/doctors/:id/availability', asyncHandler(async (req: Request, res: Response) => {
+//* Get availability slots for a doctor
+router.get('/doctors/availability/:id', asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { date } = req.query;
@@ -655,10 +632,10 @@ router.get('/doctors/:id/availability', asyncHandler(async (req: Request, res: R
         const selectedDate = new Date(date as string);
         const dayOfWeek = selectedDate.getDay();
 
-        const availability = await prisma.doctorAvailability.findFirst({
+        const availability = await prisma.availability.findFirst({
             where: {
                 doctorId: id,
-                dayOfWeek
+                day : dayOfWeek.toString()
             }
         });
 
@@ -668,10 +645,10 @@ router.get('/doctors/:id/availability', asyncHandler(async (req: Request, res: R
 
         const slots = [];
         const startTime = new Date(selectedDate);
-        startTime.setHours(availability.startTime.getHours(), availability.startTime.getMinutes(), 0, 0);
+        startTime.setHours(new Date(availability.startTime).getHours(), new Date(availability.startTime).getMinutes(), 0, 0);
 
         const endTime = new Date(selectedDate);
-        endTime.setHours(availability.endTime.getHours(), availability.endTime.getMinutes(), 0, 0);
+        endTime.setHours(new Date(availability.endTime).getHours(), new Date(availability.endTime).getMinutes(), 0, 0);
 
         let currentSlot = new Date(startTime);
         while (currentSlot < endTime) {
@@ -699,8 +676,8 @@ router.get('/doctors/:id/availability', asyncHandler(async (req: Request, res: R
     }
 }));
 
-// Get availability slots for a lab
-router.get('/labs/:id/availability', asyncHandler(async (req: Request, res: Response) => {
+//* Get availability slots for a lab
+router.get('/labs/availability/:id', asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { date } = req.query;
@@ -715,9 +692,9 @@ router.get('/labs/:id/availability', asyncHandler(async (req: Request, res: Resp
         const lab = await prisma.lab.findUnique({
             where: { id },
             include: {
-                operatingHours: {
+                availability: {
                     where: {
-                        dayOfWeek
+                        day: dayOfWeek.toString()
                     }
                 }
             }
@@ -727,18 +704,20 @@ router.get('/labs/:id/availability', asyncHandler(async (req: Request, res: Resp
             return res.status(404).json({ message: "Lab not found" });
         }
 
-        if (lab.operatingHours.length === 0) {
+        if (lab.availability.length === 0) {
             return res.status(200).json({ slots: [] });
         }
 
-        const operatingHours = lab.operatingHours[0];
+        const availability = lab.availability[0];
         const slots = [];
-        
+
         const startTime = new Date(selectedDate);
-        startTime.setHours(operatingHours.startHour, 0, 0, 0);
+        const [startHour, startMinute] = availability.startTime.split(':').map(Number);
+        startTime.setHours(startHour, startMinute, 0, 0);
 
         const endTime = new Date(selectedDate);
-        endTime.setHours(operatingHours.endHour, 0, 0, 0);
+        const [endHour, endMinute] = availability.endTime.split(':').map(Number);
+        endTime.setHours(endHour, endMinute, 0, 0);
 
         let currentSlot = new Date(startTime);
         while (currentSlot < endTime) {
@@ -755,7 +734,9 @@ router.get('/labs/:id/availability', asyncHandler(async (req: Request, res: Resp
                 }
             });
 
-            if (concurrentAppointments < (lab.simultaneousAppointments ?? 0)) {
+            // Allow only 3 concurrent appointments as a default
+            const maxConcurrent = process.env.MAX_ATTEMPTS_TO_BOOK ? parseInt(process.env.MAX_ATTEMPTS_TO_BOOK) : 3;
+            if (concurrentAppointments < maxConcurrent) {
                 slots.push(new Date(currentSlot));
             }
 

@@ -25,9 +25,14 @@ router.post('/create', authenticateToken, isDoctor, asyncHandler(async (req: Req
 
   const doctor = await prisma.doctor.create({
     data: {
-      userId,
       specialization: specialization || [],
       qualifications: qualifications || [],
+      price: 0,
+      user: {
+        connect: {
+          id: userId
+        }
+      }
     },
     include: {
       user: {

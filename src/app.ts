@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 
 import authRoutes from './routes/user.routes';
-import doctorRoutes from './routes/doctor.Routes';
+import doctorRoutes from './routes/doctor.routes';
 import doctor_hospitalRoutes from './routes/doctor-hospital.routes';
 import hospitalRoutes from './routes/hospital.routes';
 import labRoutes from './routes/lab.routes';
