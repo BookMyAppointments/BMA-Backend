@@ -52,7 +52,7 @@ router.post('/signup', asyncHandler(async (req: Request, res: Response) => {
       });
     }
 
-    const emailResult = await sendVerificationEmail(email, verifyCode);
+    const emailResult = await sendVerificationEmail(email, verifyCode, 'signup');
     if (!emailResult.success) {
       return res.status(500).json({ message: "Failed to send verification email" });
     }
@@ -228,7 +228,7 @@ router.post('/reset-password/request', asyncHandler(async (req: Request, res: Re
       }
     });
 
-    const emailResult = await sendVerificationEmail(email, resetCode);
+    const emailResult = await sendVerificationEmail(email, resetCode, 'reset');
     if (!emailResult.success) {
       return res.status(500).json({ message: "Failed to send reset code" });
     }

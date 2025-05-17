@@ -198,18 +198,11 @@ model TestResult {
 model Notification {
   id        String           @id @default(auto()) @map("_id") @db.ObjectId
   userId    String           @db.ObjectId
-  type      NotificationType
+  type      AppointmentStatus
   message   String
   read      Boolean          @default(false)
   createdAt DateTime         @default(now())
   user      User             @relation(fields: [userId], references: [id])
-}
-
-enum NotificationType {
-  REMINDER
-  CONFIRMATION
-  RESCHEDULE
-  TEST_RESULT
 }
 
 // ========== MEDICAL HISTORY ==========

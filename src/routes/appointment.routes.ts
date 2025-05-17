@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middlewares/auth.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
-import { sendNotification } from '../utils/notification.service';
+import { sendNotification } from '../services/notification.service';
 import { Availability } from '@prisma/client';
 
 const router = Router();
@@ -142,7 +142,7 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
                     userId: appointment.doctor.user.id,
                     title: 'New Appointment Request',
                     message: `You have a new appointment request from ${appointment.user.name}`,
-                    type: 'APPOINTMENT_REQUEST'
+                    type: 'PENDING'
                 });
             } else if (labId) {
                 const confirmedAppointment = await prisma.appointment.update({
@@ -159,7 +159,7 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
                     userId,
                     title: 'Lab Appointment Confirmed',
                     message: `Your ${confirmedAppointment.test?.name} test at ${confirmedAppointment.lab?.name} is confirmed for ${confirmedAppointment.scheduledAt}`,
-                    type: 'APPOINTMENT_CONFIRMATION'
+                    type: 'CONFIRMED'
                 });
 
                 return res.status(201).json(confirmedAppointment);
@@ -225,7 +225,7 @@ router.patch('/confirm/:id', authenticateToken, asyncHandler(async (req: Request
                 userId: updatedAppointment.userId,
                 title: 'Appointment Confirmed',
                 message: `Your appointment with Dr. ${updatedAppointment.doctor?.user.name} is confirmed for ${updatedAppointment.scheduledAt}`,
-                type: 'APPOINTMENT_CONFIRMATION'
+                type: 'CONFIRMED'
             });
         } catch (notificationError) {
             console.error('Failed to send notification:', notificationError);
@@ -389,14 +389,14 @@ router.patch('/reschedule/:id', authenticateToken, asyncHandler(async (req: Requ
                     userId: notificationRecipient,
                     title: 'Appointment Rescheduled',
                     message: `Appointment with ${userId === appointment.userId ? 'you' : appointment.user.name} has been rescheduled to ${newAppointmentTime}`,
-                    type: 'APPOINTMENT_RESCHEDULED'
+                    type: 'RESCHEDULED'
                 });
             } else if (appointment.labId) {
                 await sendNotification({
                     userId: appointment.userId,
                     title: 'Lab Appointment Rescheduled',
                     message: `Your ${appointment.test?.name} test has been rescheduled to ${newAppointmentTime}`,
-                    type: 'APPOINTMENT_RESCHEDULED'
+                    type: 'RESCHEDULED'
                 });
             }
         } catch (notificationError) {
@@ -474,14 +474,14 @@ router.patch('/cancel/:id', authenticateToken, asyncHandler(async (req: Request,
                     userId: notificationRecipient,
                     title: 'Appointment Cancelled',
                     message: `Appointment with ${userId === appointment.userId ? 'you' : appointment.user.name} has been cancelled`,
-                    type: 'APPOINTMENT_CANCELLED'
+                    type: 'CANCELLED'
                 });
             } else if (appointment.labId) {
                 await sendNotification({
                     userId: appointment.userId,
                     title: 'Lab Appointment Cancelled',
                     message: `Your ${appointment.test?.name} test has been cancelled`,
-                    type: 'APPOINTMENT_CANCELLED'
+                    type: 'CANCELLED'
                 });
             }
         } catch (notificationError) {
@@ -549,7 +549,7 @@ router.patch('/:id/complete', authenticateToken, asyncHandler(async (req: Reques
                 userId: updatedAppointment.userId,
                 title: 'Appointment Completed',
                 message: `Your appointment with Dr. ${updatedAppointment.doctor?.user.name} has been marked as completed`,
-                type: 'APPOINTMENT_COMPLETED'
+                type: 'COMPLETED'
             });
         } catch (notificationError) {
             console.error('Failed to send notification:', notificationError);
