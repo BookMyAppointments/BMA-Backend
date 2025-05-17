@@ -1,16 +1,13 @@
 import express from 'express';
-import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { PrismaClient, PaymentStatus, PaymentMethod } from '@prisma/client';
 import { asyncHandler } from '../utils/asyncHandler';
+import { razorpay } from '../lib/razorpay'
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID!,
-    key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
+//* ------------------------- PAYMENT OPERATIONS ------------------------- *//
 
 //* Create a new order
 router.post('/create-order', asyncHandler(async (req, res) => {

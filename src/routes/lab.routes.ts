@@ -5,7 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { isAdmin } from '../middlewares/admin.middleware';
 
 const router = Router();
-//* -------------------------- LAB CRUD OPERATIONS -------------------------- 
+//* -------------------------- LAB CRUD OPERATIONS -------------------------- *//
 
 //* Create a new lab (Admin only)
 router.post('/create/:hospitalId', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {

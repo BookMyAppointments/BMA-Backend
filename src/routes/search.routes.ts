@@ -7,7 +7,7 @@ import { AppointmentStatus, Hospital } from '@prisma/client';
 
 const router = Router();
 
-//* SEARCH & FILTER OPERATIONS
+//* ------------------------- SEARCH & FILTER OPERATIONS ------------------------- *//
 
 //* Search doctors by name/specialization
 router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
@@ -54,8 +54,8 @@ router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
     res.status(200).json(doctors);
 }));
 
-// Search hospitals by name/location (with distance filtering but cordinates required ...latitude and longitude ) ---
-router.get('/hospitals/search', asyncHandler(async (req: Request, res: Response) => {
+//* Search hospitals by name/location (with distance filtering but cordinates required ...latitude and longitude ) ---
+router.get('/hospitals', asyncHandler(async (req: Request, res: Response) => {
     const { name, lat, lng, radius, department, service } = req.query;
 
     const where: any = {
@@ -134,7 +134,7 @@ router.get('/tests', asyncHandler(async (req: Request, res: Response) => {
     res.status(200).json(tests);
 }));
 
-// Filter appointments by status (authenticated users only)
+//* Filter appointments by status (authenticated users only)
 router.get('/appointments', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     const userId = (req as any).user.userId;
     const { status } = req.query;
@@ -179,7 +179,7 @@ router.get('/appointments', authenticateToken, asyncHandler(async (req: Request,
     res.status(200).json(appointments);
 }));
 
-// Location-based search for all entities
+//* Location-based search for all entities
 router.get('/nearby', asyncHandler(async (req: Request, res: Response) => {
     const { lat, lng, radius, type } = req.query;
 

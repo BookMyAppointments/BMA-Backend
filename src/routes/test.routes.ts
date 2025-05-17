@@ -6,10 +6,10 @@ import { isLab } from '../middlewares/lab.middleware';
 
 const router = Router();
 
-//  MEDICAL TEST CRUD OPERATIONS 
+//* -------------------------  MEDICAL TEST CRUD OPERATIONS ------------------------- *// 
 
-// Create a new medical test (Admin/Lab)
-router.post('/', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
+//* Create a new medical test (Admin/Lab)
+router.post('/create', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { name, category, price, homeSample, labId } = req.body;
 
@@ -51,8 +51,8 @@ router.post('/', authenticateToken, isLab, asyncHandler(async (req: Request, res
     }
 }));
 
-// Get all medical tests  --->  ye code samj nhi aaya gpt ka hai to dhyaan se dekhiy iss  it working or not 
-router.get('/', asyncHandler(async (req: Request, res: Response) => {
+//* Get all medical tests
+router.get('/get', asyncHandler(async (req: Request, res: Response) => {
     try {
         const { category, minPrice, maxPrice, homeSample } = req.query;
 
@@ -93,8 +93,8 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
     }
 }));
 
-// Get test by ID (for all user)
-router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
+//* Get test by ID (for all user)
+router.get('/get/:id', asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
@@ -120,8 +120,8 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
     }
 }));
 
-// Update medical test (Admin/Lab)
-router.put('/:id', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
+//* Update medical test (Admin/Lab)
+router.put('/update/:id', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { name, category, price, homeSample } = req.body;
@@ -157,8 +157,8 @@ router.put('/:id', authenticateToken, isLab, asyncHandler(async (req: Request, r
     }
 }));
 
-// Delete medical test (Admin/Lab)
-router.delete('/:id', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
+//* Delete medical test (Admin/Lab)
+router.delete('/delete/:id', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
@@ -181,9 +181,9 @@ router.delete('/:id', authenticateToken, isLab, asyncHandler(async (req: Request
     }
 }));
 
-// TEST CATEGORIES 
+//* ------------------------- TEST CATEGORIES & RESULTS ------------------------- *//
 
-// Get all test categories (for all user)
+//* Get all test categories (for all user)
 router.get('/categories/all', asyncHandler(async (req: Request, res: Response) => {
     try {
         const categories = await prisma.medicalTest.groupBy({
@@ -203,10 +203,8 @@ router.get('/categories/all', asyncHandler(async (req: Request, res: Response) =
     }
 }));
 
-// TEST RESULTS MANAGEMENT 
-
 // Upload test results (Lab)
-router.post('/:id/results', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
+router.post('/results/:id', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { userId, result } = req.body;

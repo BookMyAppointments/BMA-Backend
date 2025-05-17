@@ -6,6 +6,8 @@ import { isDoctor } from '../middlewares/doctor.middleware';
 
 const router = Router();
 
+//* ------------------------- HOSPITAL AFFILIATION OPERATIONS ------------------------- */
+
 //* Add hospital affiliation for current doctor
 router.post('/affiliations', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;

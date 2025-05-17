@@ -10,6 +10,8 @@ interface Review {
   rating: number;
 }
 
+//* ------------------------- DOCTOR PROFILE OPERATIONS ------------------------- *//
+
 //* Add a new doctor profile
 router.post('/create', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.userId;

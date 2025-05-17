@@ -7,6 +7,8 @@ import { Availability } from '@prisma/client';
 
 const router = Router();
 
+//* ------------------------- APPOINTMENT OPERATIONS ------------------------- *//
+
 //* Create a new appointment (doctor or lab test)
 router.post('/create', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {

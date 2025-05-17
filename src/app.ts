@@ -9,6 +9,8 @@ import hospitalRoutes from './routes/hospital.routes';
 import labRoutes from './routes/lab.routes';
 import searchRoutes from './routes/search.routes';
 import paymentRouter from './routes/payment.routes';
+import appointmentRoutes from './routes/appointment.routes';
+import testRoutes from './routes/test.routes';
 
 dotenv.config();
 const app: Application = express();
@@ -30,7 +32,9 @@ app.use('/api/v1/labs', labRoutes); //* all-verified
 app.use('/api/v1/doctors', doctorRoutes); //* all-verified
 app.use('/api/v1/doctor-hospitals', doctor_hospitalRoutes); //* all-verified
 app.use('/api/v1/payment', paymentRouter); //* all-verified
-app.use('/api/v1/search', searchRoutes);
+app.use('/api/v1/search', searchRoutes); //* all-verified
+app.use('/api/v1/appointments', appointmentRoutes); //* all-verified
+app.use('/api/v1/tests', testRoutes); 
 
 
 export default app;
