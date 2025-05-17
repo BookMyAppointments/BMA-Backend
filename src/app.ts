@@ -11,6 +11,7 @@ import searchRoutes from './routes/search.routes';
 import paymentRouter from './routes/payment.routes';
 import appointmentRoutes from './routes/appointment.routes';
 import testRoutes from './routes/test.routes';
+import file_uploadRoutes from './services/file-upload.service';
 
 dotenv.config();
 const app: Application = express();
@@ -34,7 +35,7 @@ app.use('/api/v1/doctor-hospitals', doctor_hospitalRoutes); //* all-verified
 app.use('/api/v1/payment', paymentRouter); //* all-verified
 app.use('/api/v1/search', searchRoutes); //* all-verified
 app.use('/api/v1/appointments', appointmentRoutes); //* all-verified
-app.use('/api/v1/tests', testRoutes); 
-
+app.use('/api/v1/tests', testRoutes);
+app.use('/api/v1/file-upload', file_uploadRoutes); //* all-verified
 
 export default app;

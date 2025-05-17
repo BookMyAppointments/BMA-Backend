@@ -203,7 +203,7 @@ router.get('/categories/all', asyncHandler(async (req: Request, res: Response) =
     }
 }));
 
-// Upload test results (Lab)
+//* Upload test results (Lab)
 router.post('/results/:id', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -254,16 +254,10 @@ router.post('/results/:id', authenticateToken, isLab, asyncHandler(async (req: R
     }
 }));
 
-// Get test results for user
-router.get('/results/user/:userId', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+//* Get test results for user
+router.get('/results/get', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
-        const { userId } = req.params;
-        const requestingUserId = (req as any).user.userId;
-
-        // Users can only access their own results
-        if (userId !== requestingUserId) {
-            return res.status(403).json({ message: "Unauthorized to access these results" });
-        }
+        const userId = (req as any).user.userId;
 
         const results = await prisma.testResult.findMany({
             where: { userId },
@@ -286,8 +280,8 @@ router.get('/results/user/:userId', authenticateToken, asyncHandler(async (req: 
     }
 }));
 
-// Get test results for a specific test (Lab)
-router.get('/:id/results', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
+//* Get test results for a specific test (Lab)
+router.get('/results/:id', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
@@ -319,11 +313,9 @@ router.get('/:id/results', authenticateToken, isLab, asyncHandler(async (req: Re
         console.error('Error fetching test results:', error);
         res.status(500).json({ message: "An error occurred while fetching test results" });
     }
-}));
+})); 
 
-// LAB ASSIGNMENT 
-
-// Get tests by lab (for all user)
+//* Get tests by lab (for all user)
 router.get('/lab/:labId', asyncHandler(async (req: Request, res: Response) => {
     try {
         const { labId } = req.params;
