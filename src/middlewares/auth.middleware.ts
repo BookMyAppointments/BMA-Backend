@@ -30,7 +30,6 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
-    console.log('Verified Token:', verifiedToken);
     const user = await prisma.user.findFirst({
       where: { id: verifiedToken.userId }
     });

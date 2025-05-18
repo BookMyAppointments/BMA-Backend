@@ -8,16 +8,28 @@ const router = Router();
 
 //* --------------------- HOSPITAL CRUD OPERATIONS --------------------- *//
 
-//* Create a new hospital (Admin only)
+//* Create a new hospital (Admin only) )(verified**)
 router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
-    const { 
-        name, 
-        departments, 
-        facilities, 
-        services, 
-        hours, 
-        location 
+    const {
+        name,
+        departments,
+        facilities,
+        services,
+        hours,
+        location
     } = req.body;
+
+    if (!name || !location) {
+        return res.status(400).json({ message: "Name and location are required" });
+    }
+
+    if (!location.lat || !location.lng || !location.address) {
+        return res.status(400).json({ message: "Location details are required" });
+    }
+
+    if (!Array.isArray(departments) || !Array.isArray(facilities) || !Array.isArray(services)) {
+        return res.status(400).json({ message: "Departments, facilities, and services should be arrays" });
+    }
 
     // Create location first
     const newLocation = await prisma.location.create({
@@ -32,10 +44,10 @@ router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Requ
     const hospital = await prisma.hospital.create({
         data: {
             name,
-            departments: departments || [],
-            facilities: facilities || [],
-            services: services || [],
-            hours: hours || '',
+            departments: departments,
+            facilities: facilities,
+            services: services,
+            hours: hours,
             location: {
                 connect: { id: newLocation.id }
             }
@@ -51,18 +63,18 @@ router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Requ
     });
 }));
 
-//* Get all hospitals (KOI BHI KR SAKTA HAI USE)
+//* Get all hospitals (verified**)
 router.get('/get', asyncHandler(async (req: Request, res: Response) => {
     const { department, service } = req.query;
-    
+
     const where: any = {};
-    
+
     if (department) {
         where.departments = {
             has: department as string
         };
     }
-    
+
     if (service) {
         where.services = {
             has: service as string
@@ -98,11 +110,11 @@ router.get('/get', asyncHandler(async (req: Request, res: Response) => {
     res.status(200).json(hospitals);
 }));
 
-//* Get hospital by ID
+//* Get hospital by ID (verified**)
 router.get('/get/:id', asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
-    const hospital = await prisma.hospital.findUnique({
+    const hospital = await prisma.hospital.findFirst({
         where: { id },
         include: {
             location: true,
@@ -138,20 +150,19 @@ router.get('/get/:id', asyncHandler(async (req: Request, res: Response) => {
     res.status(200).json(hospital);
 }));
 
-//* Update hospital (Admin only)
+//* Update hospital (Admin only) (verified**)
 router.put('/update/:id', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const { 
-        name, 
-        departments, 
-        facilities, 
-        services, 
-        hours, 
-        location 
+    const {
+        name,
+        departments,
+        facilities,
+        services,
+        hours,
+        location
     } = req.body;
 
-    // Get hospital to update
-    const hospital = await prisma.hospital.findUnique({
+    const hospital = await prisma.hospital.findFirst({
         where: { id },
         include: { location: true }
     });
@@ -160,19 +171,17 @@ router.put('/update/:id', authenticateToken, isAdmin, asyncHandler(async (req: R
         return res.status(404).json({ message: "Hospital not found" });
     }
 
-    // Update location if provided
     if (location) {
         await prisma.location.update({
             where: { id: hospital.locationId },
             data: {
-                lat: location.lat,
-                lng: location.lng,
-                address: location.address
+                lat: location.lat || hospital.location.lat,
+                lng: location.lng || hospital.location.lng,
+                address: location.address || hospital.location.address
             }
         });
     }
 
-    // Update hospital
     const updatedHospital = await prisma.hospital.update({
         where: { id },
         data: {
@@ -193,7 +202,7 @@ router.put('/update/:id', authenticateToken, isAdmin, asyncHandler(async (req: R
     });
 }));
 
-//* Delete hospital (Admin only)
+//* Delete hospital (Admin only) (verified**)
 router.delete('/delete/:id', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 

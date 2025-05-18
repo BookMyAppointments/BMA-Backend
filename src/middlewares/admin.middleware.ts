@@ -4,9 +4,9 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { Request, Response } from "express";
 
 export const isAdmin = asyncHandler(async (req: Request, res: Response, next) => {
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user.id;
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.user.findFirst({
         where: { id: userId },
         select: { role: true }
     });

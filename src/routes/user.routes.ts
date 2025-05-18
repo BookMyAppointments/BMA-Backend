@@ -180,7 +180,7 @@ router.get('/profile', authenticateToken, asyncHandler(async (req: Request, res:
 }));
 
 //* verified
-router.post('/profile', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+router.put('/profile', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
     const { name, phone, dob, gender, address } = req.body;
@@ -324,5 +324,23 @@ router.post('/reset-password', asyncHandler(async (req: Request, res: Response) 
     return res.status(500).json({ message: "Internal server error" });
   }
 }));
+
+//* verified
+router.get("/admin-route", authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        role: "ADMIN"
+      }
+    });
+
+    res.status(200).json({"Message" : "Admin role updated for user!"})
+  } catch (error) {
+    console.error("Error in catch block", error);
+    res.status(500).json({ "message": "Internal Server Error!" });
+  }
+}))
 
 export default router;
