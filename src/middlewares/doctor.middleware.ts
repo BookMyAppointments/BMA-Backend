@@ -4,7 +4,7 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { Request, Response } from "express";
 
 export const isDoctor = asyncHandler(async (req: Request, res: Response, next) => {
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user.id;
 
     const user = await prisma.user.findUnique({
         where: { id: userId },

@@ -10,10 +10,10 @@ const router = Router();
 
 //* Add hospital affiliation for current doctor
 router.post('/affiliations', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
-  const userId = (req as any).user.userId;
+  const userId = (req as any).user.id;
   const { hospitalId } = req.body;
 
-  const doctor = await prisma.doctor.findUnique({
+  const doctor = await prisma.doctor.findFirst({
     where: { userId },
     select: { id: true }
   });
@@ -22,7 +22,7 @@ router.post('/affiliations', authenticateToken, isDoctor, asyncHandler(async (re
     return res.status(404).json({ message: "Doctor profile not found" });
   }
 
-  const hospital = await prisma.hospital.findUnique({
+  const hospital = await prisma.hospital.findFirst({
     where: { id: hospitalId }
   });
 

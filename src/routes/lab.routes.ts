@@ -7,12 +7,12 @@ import { isAdmin } from '../middlewares/admin.middleware';
 const router = Router();
 //* -------------------------- LAB CRUD OPERATIONS -------------------------- *//
 
-//* Create a new lab (Admin only)
+//* Create a new lab (Admin only) (verified**)
 router.post('/create/:hospitalId', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     const { hospitalId } = req.params;
     const {
         name, 
-        services, 
+        services,
         location 
     } = req.body;
 
@@ -58,7 +58,7 @@ router.post('/create/:hospitalId', authenticateToken, isAdmin, asyncHandler(asyn
     });
 }));
 
-//* Get all labs for a hospital (public)
+//* Get all labs for a hospital (public) (verified**)
 router.get('/get/:hospitalId', asyncHandler(async (req: Request, res: Response) => {
     const { hospitalId } = req.params;
     const { service } = req.query;
@@ -84,7 +84,7 @@ router.get('/get/:hospitalId', asyncHandler(async (req: Request, res: Response) 
     res.status(200).json(labs);
 }));
 
-//* Get lab by ID 
+//* Get lab by ID (public) (verified**)
 router.get('/find/:id', asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
@@ -103,7 +103,7 @@ router.get('/find/:id', asyncHandler(async (req: Request, res: Response) => {
     res.status(200).json(lab);
 }));
 
-//* Update lab (Admin only)
+//* Update lab (Admin only) (verified**)
 router.put('/update/:id', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const { 
@@ -153,7 +153,7 @@ router.put('/update/:id', authenticateToken, isAdmin, asyncHandler(async (req: R
     });
 }));
 
-//* Delete lab (Admin only)
+//* Delete lab (Admin only) (verified**)
 router.delete('/update/:id', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 

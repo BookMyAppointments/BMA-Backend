@@ -341,6 +341,24 @@ router.get("/admin-route", authenticateToken, asyncHandler(async (req: Request, 
     console.error("Error in catch block", error);
     res.status(500).json({ "message": "Internal Server Error!" });
   }
-}))
+}));
+
+//* verified
+router.get("/doctor-route", authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        role: "DOCTOR"
+      }
+    });
+
+    res.status(200).json({"Message" : "Doctor role updated for user!"})
+  } catch (error) {
+    console.error("Error in catch block", error);
+    res.status(500).json({ "message": "Internal Server Error!" });
+  }
+}));
 
 export default router;
