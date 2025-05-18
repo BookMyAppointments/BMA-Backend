@@ -3,14 +3,14 @@ generator client {
 }
 
 datasource db {
-  provider = "mongodb"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 // ========== AUTH & USER MGMT ==========
 
 model User {
-  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  id            String         @id @default(uuid())
   email         String         @unique
   password      String
   name          String
@@ -27,19 +27,19 @@ model User {
   testResults   TestResult[]
   notifications Notification[]
   payments      Payment[]
-  Doctor        Doctor?
-  Review        Review[]
+  doctor        Doctor?
+  reviews       Review[]
 }
 
 model Profile {
-  id         String    @id @default(auto()) @map("_id") @db.ObjectId
-  userId     String    @unique @db.ObjectId
+  id         String    @id @default(uuid())
+  userId     String    @unique
   gender     String?
   dob        DateTime?
   address    String?
-  locationId String?   @db.ObjectId
+  locationId String?
   location   Location? @relation(fields: [locationId], references: [id])
-  user       User      @relation(fields: [userId], references: [id])
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum Role {
@@ -49,19 +49,19 @@ enum Role {
 }
 
 model Token {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String   @db.ObjectId
+  id        String   @id @default(uuid())
+  userId    String
   token     String
   type      String
   expiresAt DateTime
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // ========== DOCTOR MGMT ==========
 
 model Doctor {
-  id             String           @id @default(auto()) @map("_id") @db.ObjectId
-  userId         String           @unique @db.ObjectId
+  id             String           @id @default(uuid())
+  userId         String           @unique
   specialization String[]
   qualifications String[]
   ratings        Float?
@@ -70,92 +70,94 @@ model Doctor {
   availability   Availability[]
   affiliations   DoctorHospital[]
   appointments   Appointment[]
-  user           User             @relation(fields: [userId], references: [id])
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model DoctorHospital {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  doctorId   String   @db.ObjectId
-  hospitalId String   @db.ObjectId
-  doctor     Doctor   @relation(fields: [doctorId], references: [id])
-  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  id         String   @id @default(uuid())
+  doctorId   String
+  hospitalId String
+  doctor     Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  hospital   Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, hospitalId])
 }
 
 model Review {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  doctorId  String   @db.ObjectId
-  userId    String   @db.ObjectId
+  id        String   @id @default(uuid())
+  doctorId  String
+  userId    String
   rating    Int
   comment   String?
   createdAt DateTime @default(now())
-  doctor    Doctor   @relation(fields: [doctorId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  doctor    Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Availability {
-  id        String  @id @default(auto()) @map("_id") @db.ObjectId
-  doctorId  String  @db.ObjectId
+  id        String  @id @default(uuid())
+  doctorId  String
   day       String
   startTime String
   endTime   String
-  doctor    Doctor  @relation(fields: [doctorId], references: [id])
-  Lab       Lab?    @relation(fields: [labId], references: [id])
-  labId     String? @db.ObjectId
+  doctor    Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  lab       Lab?    @relation(fields: [labId], references: [id])
+  labId     String?
 }
 
 // ========== HOSPITAL/LAB MGMT ==========
 
 model Hospital {
-  id          String           @id @default(auto()) @map("_id") @db.ObjectId
+  id          String           @id @default(uuid())
   name        String
   departments String[]
   facilities  String[]
   services    String[]
   hours       String
-  locationId  String           @db.ObjectId
+  locationId  String
   location    Location         @relation(fields: [locationId], references: [id])
   doctors     DoctorHospital[]
   labs        Lab[]
 }
 
 model Lab {
-  id           String         @id @default(auto()) @map("_id") @db.ObjectId
-  hospitalId   String         @db.ObjectId
+  id           String         @id @default(uuid())
+  hospitalId   String
   name         String
   services     String[]
-  locationId   String         @db.ObjectId
+  locationId   String
   availability Availability[]
   location     Location       @relation(fields: [locationId], references: [id])
   tests        MedicalTest[]
-  hospital     Hospital       @relation(fields: [hospitalId], references: [id])
-  Appointment  Appointment[]
+  hospital     Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
 }
 
 // ========== LOCATION ==========
 
 model Location {
-  id       String     @id @default(auto()) @map("_id") @db.ObjectId
+  id       String     @id @default(uuid())
   lat      Float
   lng      Float
   address  String
-  Profile  Profile[]
-  Hospital Hospital[]
-  Lab      Lab[]
+  profiles Profile[]
+  hospitals Hospital[]
+  labs     Lab[]
 }
 
 // ========== APPOINTMENTS ==========
 
 model Appointment {
-  id            String            @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String            @db.ObjectId
-  doctorId      String?           @db.ObjectId
-  labId         String?           @db.ObjectId
-  testId        String?           @db.ObjectId
+  id            String            @id @default(uuid())
+  userId        String
+  doctorId      String?
+  labId         String?
+  testId        String?
   status        AppointmentStatus
   scheduledAt   DateTime
   rescheduledAt DateTime?
   cancelledAt   DateTime?
-  user          User              @relation(fields: [userId], references: [id])
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   doctor        Doctor?           @relation(fields: [doctorId], references: [id])
   lab           Lab?              @relation(fields: [labId], references: [id])
   test          MedicalTest?      @relation(fields: [testId], references: [id])
@@ -172,61 +174,61 @@ enum AppointmentStatus {
 // ========== MEDICAL TESTS ==========
 
 model MedicalTest {
-  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  id          String        @id @default(uuid())
   name        String
   category    String
   price       Float
   homeSample  Boolean
-  labId       String        @db.ObjectId
-  lab         Lab           @relation(fields: [labId], references: [id])
+  labId       String
+  lab         Lab           @relation(fields: [labId], references: [id], onDelete: Cascade)
   results     TestResult[]
-  Appointment Appointment[]
+  appointments Appointment[]
 }
 
 model TestResult {
-  id       String      @id @default(auto()) @map("_id") @db.ObjectId
-  userId   String      @db.ObjectId
-  testId   String      @db.ObjectId
+  id       String      @id @default(uuid())
+  userId   String
+  testId   String
   result   String
   issuedAt DateTime
-  user     User        @relation(fields: [userId], references: [id])
-  test     MedicalTest @relation(fields: [testId], references: [id])
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  test     MedicalTest @relation(fields: [testId], references: [id], onDelete: Cascade)
 }
 
 // ========== NOTIFICATIONS ==========
 
 model Notification {
-  id        String           @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String           @db.ObjectId
+  id        String           @id @default(uuid())
+  userId    String
   type      AppointmentStatus
   message   String
   read      Boolean          @default(false)
   createdAt DateTime         @default(now())
-  user      User             @relation(fields: [userId], references: [id])
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // ========== MEDICAL HISTORY ==========
 
 model MedicalRecord {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId    String   @unique @db.ObjectId
+  id        String   @id @default(uuid())
+  userId    String   @unique
   history   String[]
   documents String[]
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // ========== PAYMENT ==========
 
 model Payment {
-  id         String        @id @default(auto()) @map("_id") @db.ObjectId
-  userId     String        @db.ObjectId
+  id         String        @id @default(uuid())
+  userId     String
   amount     Float
   method     PaymentMethod
   status     PaymentStatus
   paidAt     DateTime
   refundAt   DateTime?
   invoiceUrl String?
-  user       User          @relation(fields: [userId], references: [id])
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum PaymentMethod {
@@ -245,7 +247,7 @@ enum PaymentStatus {
 // ========== ANALYTICS (LOG TABLES) ==========
 
 model AnalyticsLog {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(uuid())
   event     String
   userId    String?
   createdAt DateTime @default(now())
@@ -255,7 +257,7 @@ model AnalyticsLog {
 // ========== INTEGRATION CONFIG ==========
 
 model Integration {
-  id      String  @id @default(auto()) @map("_id") @db.ObjectId
+  id      String  @id @default(uuid())
   name    String
   config  Json
   enabled Boolean @default(true)
@@ -264,7 +266,7 @@ model Integration {
 // ========== API META ==========
 
 model ApiMeta {
-  id         String @id @default(auto()) @map("_id") @db.ObjectId
+  id         String @id @default(uuid())
   version    String
   rateLimit  Int
   errorCodes Json

@@ -9,6 +9,7 @@ import { generateVerificationCode } from '../utils/helpers';
 
 const router = Router();
 
+//* verified
 router.post('/signup', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, password, name, phone } = req.body;
@@ -64,6 +65,7 @@ router.post('/signup', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
+//* verified
 router.post('/verify', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, code } = req.body;
@@ -104,6 +106,7 @@ router.post('/verify', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
+//* verified
 router.post('/signin', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
