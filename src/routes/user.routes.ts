@@ -147,21 +147,24 @@ router.post('/signin', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
+//* verified
 router.get('/profile', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user.id;
+    console.log("User id:", userId);
 
-    const user = await prisma.user.findUnique({
+    const user = await prisma.user.findFirst({
       where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        role: true,
-        createdAt: true,
-        updatedAt: true,
-        profile: true
+      include: {
+        profile: {
+          select: {
+            id: true,
+            userId: true,
+            gender: true,
+            dob: true,
+            address: true
+          }
+        }
       }
     });
 
@@ -176,29 +179,47 @@ router.get('/profile', authenticateToken, asyncHandler(async (req: Request, res:
   }
 }));
 
-router.put('/profile', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+//* verified
+router.post('/profile', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId;
-    const { name, phone } = req.body;
+    const userId = (req as any).user.id;
+    const { name, phone, dob, gender, address } = req.body;
 
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        name,
-        phone
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        role: true
-      }
-    });
+    console.log("User id:", userId);
+
+    if (!name && !phone && !dob && !gender && !address) {
+      return res.status(400).json({ message: "At least one field is required for update" });
+    }
+
+    if (Object.keys(req.body).some(key => ['name', 'phone'].includes(key))) {
+      const updateData: any = {};
+      if ('name' in req.body) updateData.name = name;
+      if ('phone' in req.body) updateData.phone = phone;
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: updateData
+      });
+    }
+
+    if (Object.keys(req.body).some(key => ['dob', 'gender', 'address'].includes(key))) {
+      const updateData: any = {};
+      if ('dob' in req.body) updateData.dob = dob;
+      if ('gender' in req.body) updateData.gender = gender;
+      if ('address' in req.body) updateData.address = address;
+
+      await prisma.profile.upsert({
+        where: { userId },
+        update: updateData,
+        create: {
+          userId,
+          ...updateData
+        }
+      });
+    }
 
     return res.status(200).json({
       message: "Profile updated successfully",
-      user: updatedUser
     });
   } catch (error) {
     console.error("Update profile error:", error);
@@ -206,6 +227,7 @@ router.put('/profile', authenticateToken, asyncHandler(async (req: Request, res:
   }
 }));
 
+//* verified
 router.post('/reset-password/request', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
@@ -243,6 +265,7 @@ router.post('/reset-password/request', asyncHandler(async (req: Request, res: Re
   }
 }));
 
+//* verified
 router.post('/reset-password/verify', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, code } = req.body;
@@ -270,6 +293,7 @@ router.post('/reset-password/verify', asyncHandler(async (req: Request, res: Res
   }
 }));
 
+//* verified
 router.post('/reset-password', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, newPassword } = req.body;

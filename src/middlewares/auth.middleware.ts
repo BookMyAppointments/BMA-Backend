@@ -1,9 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
+import { Role } from '@prisma/client';
 
 interface AuthenticatedRequest extends Request {
   user?: any;
+}
+
+interface VerifiedToken extends JwtPayload {
+  userId: string;
+  email: string;
+  role: Role,
+  iat: number,
+  exp: number
 }
 
 export const authenticateToken = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -16,13 +25,14 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
       return;
     }
 
-    const verifiedToken = jwt.verify(token, process.env.JWT_SECRET!) as { email: string };
+    const verifiedToken = jwt.verify(token, process.env.JWT_SECRET!) as VerifiedToken;
     if (!verifiedToken) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
+    console.log('Verified Token:', verifiedToken);
     const user = await prisma.user.findFirst({
-      where: { email: verifiedToken.email }
+      where: { id: verifiedToken.userId }
     });
 
     if (!user) {
