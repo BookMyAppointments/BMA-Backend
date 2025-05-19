@@ -8,10 +8,10 @@ const router = Router();
 
 //* ------------------------- HOSPITAL AFFILIATION OPERATIONS ------------------------- */
 
-//* Add hospital affiliation for current doctor
-router.post('/affiliations', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
+//* Add hospital affiliation for current doctor (verified**)
+router.post('/affiliations/:hospitalId', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
-  const { hospitalId } = req.body;
+  const { hospitalId } = req.params;
 
   const doctor = await prisma.doctor.findFirst({
     where: { userId },
@@ -57,7 +57,7 @@ router.post('/affiliations', authenticateToken, isDoctor, asyncHandler(async (re
   });
 }));
 
-//* Get all hospital affiliations for doc
+//* Get all hospital affiliations for doc (verified**)
 router.get('/affiliations', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
   const userId = (req as any).user.id;
 
@@ -112,7 +112,7 @@ router.delete('/affiliations/:id', authenticateToken, isDoctor, asyncHandler(asy
   res.status(200).json({ message: "Affiliation removed successfully" });
 }));
 
-//* Get all hospitals (public) (No-need, just an add-on)
+//* Get all hospitals (public) (No-need, just an add-on) (verified**)
 router.get('/get', asyncHandler(async (req: Request, res: Response) => {
   const hospitals = await prisma.hospital.findMany({
     include: {
@@ -139,7 +139,7 @@ router.get('/get', asyncHandler(async (req: Request, res: Response) => {
   res.status(200).json(hospitals);
 }));
 
-//* Get hospital by ID (public)
+//* Get hospital by ID (public) (verified**)
 router.get('/get/:id', asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 

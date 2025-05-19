@@ -27,15 +27,15 @@ app.get('/', (req, res) => {
     res.send('Hello, nishant!');
 });
 
-app.use("/api/v1/auth", authRoutes); //* all-verified
-app.use('/api/v1/hospitals', hospitalRoutes); //* all-verified
-app.use('/api/v1/labs', labRoutes); //* all-verified
-app.use('/api/v1/doctors', doctorRoutes); //* all-verified
-app.use('/api/v1/doctor-hospitals', doctor_hospitalRoutes); //* all-verified
-app.use('/api/v1/payment', paymentRouter); //* all-verified
+app.use("/api/v1/auth", authRoutes); //* all-verified & tested
+app.use('/api/v1/hospitals', hospitalRoutes); //* all-verified & tested
+app.use('/api/v1/labs', labRoutes); //* all-verified & tested
+app.use('/api/v1/doctors', doctorRoutes); //* all-verified & tested
+app.use('/api/v1/doctor-hospitals', doctor_hospitalRoutes); //* all-verified & tested
+app.use('/api/v1/payment', paymentRouter); //* all-verified & tested**
 app.use('/api/v1/search', searchRoutes); //* all-verified
 app.use('/api/v1/appointments', appointmentRoutes); //* all-verified
 app.use('/api/v1/tests', testRoutes);
-app.use('/api/v1/file-upload', file_uploadRoutes); //* all-verified
+app.use('/api/v1/file-upload', file_uploadRoutes); //* all-verified & tested
 
 export default app;

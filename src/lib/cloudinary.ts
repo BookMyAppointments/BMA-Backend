@@ -2,9 +2,9 @@ import { v2 as cloudinary } from 'cloudinary';
 import multer from 'multer';
 
 cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
-    api_key: process.env.CLOUDINARY_API_KEY!,
-    api_secret: process.env.CLOUDINARY_API_SECRET!,
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
+  api_key: process.env.CLOUDINARY_API_KEY!,
+  api_secret: process.env.CLOUDINARY_API_SECRET!,
 });
 
 const storage = multer.memoryStorage();
@@ -21,5 +21,5 @@ const imageUploadUtil = async (fileBuffer: Buffer, mimetype: string) => {
 
 
 const upload = multer({ storage });
-  
-export default {upload, imageUploadUtil};
+
+export default { upload, imageUploadUtil };

@@ -1,6 +1,5 @@
 import { prisma } from "../lib/prisma";
 import { asyncHandler } from "../utils/asyncHandler";
-
 import { Request, Response } from "express";
 
 export const isDoctor = asyncHandler(async (req: Request, res: Response, next) => {

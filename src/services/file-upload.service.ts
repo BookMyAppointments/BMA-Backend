@@ -18,7 +18,7 @@ router.post('/upload', authenticateToken, upload.single('file'), asyncHandler(as
             return res.status(400).json({ success: false, message: "File is required" });
         }
 
-        const { id } = (req as any).user;
+        const id = (req as any).user.id;
 
         const user = await prisma.user.findFirst(
             {
