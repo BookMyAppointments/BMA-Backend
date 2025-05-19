@@ -59,7 +59,7 @@ router.post('/affiliations', authenticateToken, isDoctor, asyncHandler(async (re
 
 //* Get all hospital affiliations for doc
 router.get('/affiliations', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
-  const userId = (req as any).user.userId;
+  const userId = (req as any).user.id;
 
   const doctor = await prisma.doctor.findUnique({
     where: { userId },
@@ -82,7 +82,7 @@ router.get('/affiliations', authenticateToken, isDoctor, asyncHandler(async (req
 
 //* Remove hospital affiliation
 router.delete('/affiliations/:id', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
-  const userId = (req as any).user.userId;
+  const userId = (req as any).user.id;
   const { id } = req.params;
 
   const doctor = await prisma.doctor.findUnique({

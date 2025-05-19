@@ -12,7 +12,7 @@ const router = Router();
 //* Create a new appointment (doctor or lab test)
 router.post('/create', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user.userId;
+        const userId = (req as any).user.id;
         const { doctorId, labId, testId, scheduledAt } = req.body;
 
         // Basic validation
@@ -179,7 +179,7 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
 router.patch('/confirm/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const userId = (req as any).user.userId;
+        const userId = (req as any).user.id;
 
         const appointment = await prisma.appointment.findUnique({
             where: { id },
@@ -242,7 +242,7 @@ router.patch('/confirm/:id', authenticateToken, asyncHandler(async (req: Request
 router.patch('/reschedule/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const userId = (req as any).user.userId;
+        const userId = (req as any).user.id;
         const { newTime } = req.body;
 
         if (!newTime) {
@@ -414,7 +414,7 @@ router.patch('/reschedule/:id', authenticateToken, asyncHandler(async (req: Requ
 router.patch('/cancel/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const userId = (req as any).user.userId;
+        const userId = (req as any).user.id;
 
         const appointment = await prisma.appointment.findUnique({
             where: { id },
@@ -499,7 +499,7 @@ router.patch('/cancel/:id', authenticateToken, asyncHandler(async (req: Request,
 router.patch('/:id/complete', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const userId = (req as any).user.userId;
+        const userId = (req as any).user.id;
 
         const appointment = await prisma.appointment.findUnique({
             where: { id },
@@ -566,7 +566,7 @@ router.patch('/:id/complete', authenticateToken, asyncHandler(async (req: Reques
 router.get('/get/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const userId = (req as any).user.userId;
+        const userId = (req as any).user.id;
 
         const appointment = await prisma.appointment.findUnique({
             where: { id },

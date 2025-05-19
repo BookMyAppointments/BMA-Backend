@@ -65,6 +65,7 @@ model Doctor {
   specialization String[]
   qualifications String[]
   ratings        Float?
+  about          String?
   price          Float
   reviews        Review[]
   availability   Availability[]
@@ -136,13 +137,13 @@ model Lab {
 // ========== LOCATION ==========
 
 model Location {
-  id       String     @id @default(uuid())
-  lat      Float
-  lng      Float
-  address  String
-  profiles Profile[]
+  id        String     @id @default(uuid())
+  lat       Float
+  lng       Float
+  address   String
+  profiles  Profile[]
   hospitals Hospital[]
-  labs     Lab[]
+  labs      Lab[]
 }
 
 // ========== APPOINTMENTS ==========
@@ -174,14 +175,14 @@ enum AppointmentStatus {
 // ========== MEDICAL TESTS ==========
 
 model MedicalTest {
-  id          String        @id @default(uuid())
-  name        String
-  category    String
-  price       Float
-  homeSample  Boolean
-  labId       String
-  lab         Lab           @relation(fields: [labId], references: [id], onDelete: Cascade)
-  results     TestResult[]
+  id           String        @id @default(uuid())
+  name         String
+  category     String
+  price        Float
+  homeSample   Boolean
+  labId        String
+  lab          Lab           @relation(fields: [labId], references: [id], onDelete: Cascade)
+  results      TestResult[]
   appointments Appointment[]
 }
 
@@ -198,13 +199,13 @@ model TestResult {
 // ========== NOTIFICATIONS ==========
 
 model Notification {
-  id        String           @id @default(uuid())
+  id        String            @id @default(uuid())
   userId    String
   type      AppointmentStatus
   message   String
-  read      Boolean          @default(false)
-  createdAt DateTime         @default(now())
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  read      Boolean           @default(false)
+  createdAt DateTime          @default(now())
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // ========== MEDICAL HISTORY ==========

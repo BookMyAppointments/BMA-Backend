@@ -136,7 +136,7 @@ router.get('/tests', asyncHandler(async (req: Request, res: Response) => {
 
 //* Filter appointments by status (authenticated users only)
 router.get('/appointments', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-    const userId = (req as any).user.userId;
+    const userId = (req as any).user.id;
     const { status } = req.query;
 
     const where = {

@@ -257,7 +257,7 @@ router.post('/results/:id', authenticateToken, isLab, asyncHandler(async (req: R
 //* Get test results for user
 router.get('/results/get', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user.userId;
+        const userId = (req as any).user.id;
 
         const results = await prisma.testResult.findMany({
             where: { userId },

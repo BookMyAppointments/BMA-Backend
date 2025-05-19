@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma';
 
 export const isLab = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const userId = (req as any).user.userId;
+        const userId = (req as any).user.id;
 
         const user = await prisma.user.findUnique({
             where: { id: userId },
