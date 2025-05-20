@@ -4,6 +4,8 @@ import { authenticateToken } from '../middlewares/auth.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
 import { sendNotification } from '../services/notification.service';
 import { Availability } from '@prisma/client';
+import { sendNotificationEmail } from '../emails/NotificationMail';
+import { dispatchAppointmentEmail } from '../utils/dispatcher';
 
 const router = Router();
 
@@ -64,7 +66,7 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
             const dayOfWeek = appointmentTime.getDay().toString();
             const timeStr = appointmentTime.toTimeString().slice(0, 5); // HH:mm format
 
-            const doctorAvailable = doctor.availability.some(slot => 
+            const doctorAvailable = doctor.availability.some(slot =>
                 slot.day === dayOfWeek &&
                 slot.startTime <= timeStr &&
                 slot.endTime >= timeStr
@@ -127,7 +129,7 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
                 user: true,
                 doctor: {
                     include: {
-                        user: true
+                        user: true,
                     }
                 },
                 lab: true,
@@ -144,6 +146,7 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
                     message: `You have a new appointment request from ${appointment.user.name}`,
                     type: 'PENDING'
                 });
+
             } else if (labId) {
                 const confirmedAppointment = await prisma.appointment.update({
                     where: { id: appointment.id },
@@ -155,12 +158,12 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
                     }
                 });
 
-                await sendNotification({
-                    userId,
-                    title: 'Lab Appointment Confirmed',
-                    message: `Your ${confirmedAppointment.test?.name} test at ${confirmedAppointment.lab?.name} is confirmed for ${confirmedAppointment.scheduledAt}`,
-                    type: 'CONFIRMED'
-                });
+                // await sendNotification({
+                //     userId,
+                //     title: 'Lab Appointment Confirmed',
+                //     message: `Your ${confirmedAppointment.test?.name} test at ${confirmedAppointment.lab?.name} is confirmed for ${confirmedAppointment.scheduledAt}`,
+                //     type: 'CONFIRMED'
+                // });
 
                 return res.status(201).json(confirmedAppointment);
             }
@@ -297,7 +300,7 @@ router.patch('/reschedule/:id', authenticateToken, asyncHandler(async (req: Requ
                     const [hours, minutes] = av.endTime.split(':').map(Number);
                     const endTimeDate = new Date(newAppointmentTime);
                     endTimeDate.setHours(hours, minutes, 0, 0);
-                    
+
                     return av.day === newAppointmentTime.getDay().toString() &&
                         av.startTime <= newAppointmentTime.toTimeString().slice(0, 5) &&
                         endTimeDate >= new Date(newAppointmentTime.getTime() + 30 * 60000);
@@ -496,7 +499,7 @@ router.patch('/cancel/:id', authenticateToken, asyncHandler(async (req: Request,
 }));
 
 //* Mark appointment as completed (for doctors)
-router.patch('/:id/complete', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+router.patch('/complete/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const userId = (req as any).user.id;
@@ -637,7 +640,7 @@ router.get('/doctors/availability/:id', asyncHandler(async (req: Request, res: R
         const availability = await prisma.availability.findFirst({
             where: {
                 doctorId: id,
-                day : dayOfWeek.toString()
+                day: dayOfWeek.toString()
             }
         });
 
