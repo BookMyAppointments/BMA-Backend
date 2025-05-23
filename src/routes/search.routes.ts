@@ -9,7 +9,7 @@ const router = Router();
 
 //* ------------------------- SEARCH & FILTER OPERATIONS ------------------------- *//
 
-//* Search doctors by name/specialization
+//* Search doctors by name/specialization (verified**)
 router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
     try {
         const { name, specialization, hospitalId } = req.query;
@@ -59,7 +59,7 @@ router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
     }
 }));
 
-//* Search hospitals by name/location (with distance filtering but cordinates required ...latitude and longitude ) ---
+//* Search hospitals by name/location/etc... (verified**)
 router.get('/hospitals', asyncHandler(async (req: Request, res: Response) => {
     try {
         const { name, lat, lng, radius, department, service } = req.query;
@@ -199,7 +199,7 @@ router.get('/appointments', authenticateToken, asyncHandler(async (req: Request,
     }
 }));
 
-//* Location-based search for all entities
+//* Location-based search for all entities (verified**)
 router.get('/nearby', asyncHandler(async (req: Request, res: Response) => {
     try {
         const { lat, lng, radius, type } = req.query;

@@ -4,14 +4,12 @@ import { authenticateToken } from '../middlewares/auth.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
 import { sendNotification } from '../services/notification.service';
 import { Availability } from '@prisma/client';
-import { sendNotificationEmail } from '../emails/NotificationMail';
-import { dispatchAppointmentEmail } from '../utils/dispatcher';
 
 const router = Router();
 
 //* ------------------------- APPOINTMENT OPERATIONS ------------------------- *//
 
-//* Create a new appointment (doctor or lab test)
+//* Create a new appointment (doctor or lab test) (verified**)
 router.post('/create', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const userId = (req as any).user.id;
@@ -33,8 +31,18 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
         const appointmentTime = new Date(scheduledAt);
         const now = new Date();
 
-        if (appointmentTime <= now) {
-            return res.status(400).json({ message: "Appointment time must be in the future" });
+        // Add 5 minutes buffer to account for request processing time
+        const bufferTime = new Date(now.getTime() + 5 * 60 * 1000);
+
+        console.log('Appointment time:', appointmentTime.toISOString());
+        console.log('Current time with buffer:', bufferTime.toISOString());
+
+        if (appointmentTime <= bufferTime) {
+            return res.status(400).json({ 
+                message: "Appointment time must be at least 5 minutes in the future",
+                appointmentTime: appointmentTime.toISOString(),
+                currentTime: now.toISOString()
+            });
         }
 
         // Check for user's existing appointments
@@ -63,8 +71,13 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
                 return res.status(404).json({ message: "Doctor not found" });
             }
 
-            const dayOfWeek = appointmentTime.getDay().toString();
+            // Convert day number to day name for comparison
+            const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const dayOfWeek = dayNames[appointmentTime.getDay()];
             const timeStr = appointmentTime.toTimeString().slice(0, 5); // HH:mm format
+
+            console.log('Checking availability for:', { dayOfWeek, timeStr });
+            console.log('Doctor availability:', doctor.availability);
 
             const doctorAvailable = doctor.availability.some(slot =>
                 slot.day === dayOfWeek &&
@@ -73,7 +86,12 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
             );
 
             if (!doctorAvailable) {
-                return res.status(400).json({ message: "Doctor is not available at this time" });
+                return res.status(400).json({ 
+                    message: "Doctor is not available at this time",
+                    requestedDay: dayOfWeek,
+                    requestedTime: timeStr,
+                    doctorAvailability: doctor.availability
+                });
             }
 
             // Check for doctor's existing appointments
@@ -178,7 +196,7 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
     }
 }));
 
-//* Confirm a pending appointment (for doctors)
+//* Confirm a pending appointment (for doctors) (verified**)
 router.patch('/confirm/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -241,7 +259,7 @@ router.patch('/confirm/:id', authenticateToken, asyncHandler(async (req: Request
     }
 }));
 
-//* Reschedule an appointment
+//* Reschedule an appointment (verified**)
 router.patch('/reschedule/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -250,13 +268,21 @@ router.patch('/reschedule/:id', authenticateToken, asyncHandler(async (req: Requ
 
         if (!newTime) {
             return res.status(400).json({ message: "New time is required" });
-        }
-
-        const newAppointmentTime = new Date(newTime);
+        }        const newAppointmentTime = new Date(newTime);
         const now = new Date();
 
-        if (newAppointmentTime <= now) {
-            return res.status(400).json({ message: "New appointment time must be in the future" });
+        // Add 5 minutes buffer to account for request processing time
+        const bufferTime = new Date(now.getTime() + 5 * 60 * 1000);
+
+        console.log('New appointment time:', newAppointmentTime.toISOString());
+        console.log('Current time with buffer:', bufferTime.toISOString());
+
+        if (newAppointmentTime <= bufferTime) {
+            return res.status(400).json({ 
+                message: "New appointment time must be at least 5 minutes in the future",
+                appointmentTime: newAppointmentTime.toISOString(),
+                currentTime: now.toISOString()
+            });
         }
 
         const appointment = await prisma.appointment.findUnique({
@@ -292,23 +318,28 @@ router.patch('/reschedule/:id', authenticateToken, asyncHandler(async (req: Requ
 
         if (appointment.status === 'COMPLETED') {
             return res.status(400).json({ message: "Cannot reschedule a completed appointment" });
-        }
+        }        if (appointment.doctorId) {
+            // Convert day number to day name for comparison
+            const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const dayOfWeek = dayNames[newAppointmentTime.getDay()];
+            const timeStr = newAppointmentTime.toTimeString().slice(0, 5); // HH:mm format
 
-        if (appointment.doctorId) {
-            const doctorAvailability = appointment.doctor?.availability.find(
-                (av: Availability) => {
-                    const [hours, minutes] = av.endTime.split(':').map(Number);
-                    const endTimeDate = new Date(newAppointmentTime);
-                    endTimeDate.setHours(hours, minutes, 0, 0);
+            console.log('Checking reschedule availability for:', { dayOfWeek, timeStr });
+            console.log('Doctor availability:', appointment.doctor?.availability);
 
-                    return av.day === newAppointmentTime.getDay().toString() &&
-                        av.startTime <= newAppointmentTime.toTimeString().slice(0, 5) &&
-                        endTimeDate >= new Date(newAppointmentTime.getTime() + 30 * 60000);
-                }
+            const doctorAvailable = appointment.doctor?.availability.some(slot =>
+                slot.day === dayOfWeek &&
+                slot.startTime <= timeStr &&
+                slot.endTime >= timeStr
             );
 
-            if (!doctorAvailability) {
-                return res.status(400).json({ message: "Doctor is not available at the new time" });
+            if (!doctorAvailable) {
+                return res.status(400).json({ 
+                    message: "Doctor is not available at the new time",
+                    requestedDay: dayOfWeek,
+                    requestedTime: timeStr,
+                    doctorAvailability: appointment.doctor?.availability
+                });
             }
 
             const overlappingAppointment = await prisma.appointment.findFirst({
@@ -413,7 +444,7 @@ router.patch('/reschedule/:id', authenticateToken, asyncHandler(async (req: Requ
     }
 }));
 
-//* Cancel an appointment
+//* Cancel an appointment (verified**)
 router.patch('/cancel/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -498,7 +529,7 @@ router.patch('/cancel/:id', authenticateToken, asyncHandler(async (req: Request,
     }
 }));
 
-//* Mark appointment as completed (for doctors)
+//* Mark appointment as completed (for doctors) (verified**)
 router.patch('/complete/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -565,7 +596,7 @@ router.patch('/complete/:id', authenticateToken, asyncHandler(async (req: Reques
     }
 }));
 
-//* Get appointment details
+//* Get appointment details (verified**)
 router.get('/get/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -581,8 +612,7 @@ router.get('/get/:id', authenticateToken, asyncHandler(async (req: Request, res:
                         email: true,
                         profile: true
                     }
-                },
-                doctor: {
+                },                doctor: {
                     include: {
                         user: {
                             select: {
@@ -593,9 +623,6 @@ router.get('/get/:id', authenticateToken, asyncHandler(async (req: Request, res:
                             }
                         },
                         reviews: true
-                    },
-                    select: {
-                        specialization: true,
                     }
                 },
                 lab: {
@@ -624,7 +651,7 @@ router.get('/get/:id', authenticateToken, asyncHandler(async (req: Request, res:
     }
 }));
 
-//* Get availability slots for a doctor
+//* Get availability slots for a doctor (verified**)
 router.get('/doctors/availability/:id', asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -635,25 +662,32 @@ router.get('/doctors/availability/:id', asyncHandler(async (req: Request, res: R
         }
 
         const selectedDate = new Date(date as string);
-        const dayOfWeek = selectedDate.getDay();
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayOfWeek = dayNames[selectedDate.getDay()];
 
         const availability = await prisma.availability.findFirst({
             where: {
                 doctorId: id,
-                day: dayOfWeek.toString()
+                day: dayOfWeek
             }
         });
 
         if (!availability) {
-            return res.status(200).json({ slots: [] });
+            return res.status(200).json({ 
+                slots: [],
+                message: `Doctor is not available on ${dayOfWeek}` 
+            });
         }
 
         const slots = [];
+        const [startHour, startMinute] = availability.startTime.split(':').map(Number);
+        const [endHour, endMinute] = availability.endTime.split(':').map(Number);
+
         const startTime = new Date(selectedDate);
-        startTime.setHours(new Date(availability.startTime).getHours(), new Date(availability.startTime).getMinutes(), 0, 0);
+        startTime.setHours(startHour, startMinute, 0, 0);
 
         const endTime = new Date(selectedDate);
-        endTime.setHours(new Date(availability.endTime).getHours(), new Date(availability.endTime).getMinutes(), 0, 0);
+        endTime.setHours(endHour, endMinute, 0, 0);
 
         let currentSlot = new Date(startTime);
         while (currentSlot < endTime) {
@@ -668,13 +702,27 @@ router.get('/doctors/availability/:id', asyncHandler(async (req: Request, res: R
             });
 
             if (!existingAppointment) {
-                slots.push(new Date(currentSlot));
+                slots.push({
+                    dateTime: currentSlot.toISOString(),
+                    time: currentSlot.toTimeString().slice(0, 5),
+                    available: true
+                });
             }
 
-            currentSlot = new Date(currentSlot.getTime() + 30 * 60000);
+            currentSlot = new Date(currentSlot.getTime() + 30 * 60000); // 30-minute slots
         }
 
-        res.status(200).json({ slots });
+        res.status(200).json({ 
+            doctorId: id,
+            date: selectedDate.toISOString().split('T')[0],
+            dayOfWeek,
+            availability: {
+                startTime: availability.startTime,
+                endTime: availability.endTime
+            },
+            slots,
+            totalSlots: slots.length
+        });
     } catch (error) {
         console.error('Error fetching doctor availability:', error);
         res.status(500).json({ message: "An error occurred while fetching doctor availability" });
