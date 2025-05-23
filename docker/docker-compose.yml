@@ -1,13 +1,24 @@
 version: '3.8'
+
 services:
-  mongo:
-    image: mongo:6
-    container_name: mongo
+  postgres:
+    image: postgres:latest
+    container_name: postgres_healthcare
+    environment:
+      POSTGRES_USER: username
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: healthcare_db
     ports:
-      - "27017:27017"
-    command: ["--replSet", "rs0"]
+      - "5432:5432"
     volumes:
-      - mongo_data:/data/db
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - healthcare_network
 
 volumes:
-  mongo_data:
+  postgres_data:
+    driver: local
+
+networks:
+  healthcare_network:
+    driver: bridge
