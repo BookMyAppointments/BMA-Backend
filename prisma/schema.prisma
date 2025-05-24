@@ -37,6 +37,7 @@ model Profile {
   gender     String?
   dob        DateTime?
   address    String?
+  picture   String?
   locationId String?
   location   Location? @relation(fields: [locationId], references: [id])
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
