@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "tsc -b && node dist/index.js",
     "build": "tsc -b",
+    "lint": "eslint . --ext .ts",
+    "vercel-build": "prisma generate && prisma migrate deploy && tsc -b",
+    "prisma:generate": "prisma generate",
     "seed": "ts-node prisma/seed.ts"
   },
   "keywords": [],
