@@ -19,7 +19,7 @@ const app: Application = express();
 // Middleware
 app.use(express.json());
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: [process.env.CORS_ORIGIN || 'http://localhost:5173', 'https://doctor-frontend-sigma.vercel.app'],
     credentials: true,
 }));
 
