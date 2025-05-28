@@ -7,8 +7,7 @@
     "build": "tsc -b",
     "lint": "eslint . --ext .ts",
     "vercel-build": "prisma generate && prisma migrate deploy && tsc -b",
-    "prisma:generate": "prisma generate",
-    "seed": "ts-node prisma/seed.ts"
+    "prisma:generate": "prisma generate"
   },
   "keywords": [],
   "author": "nishantchahar07 <nishantchahar20@gmail.com>",
