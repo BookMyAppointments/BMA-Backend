@@ -180,6 +180,35 @@ router.get('/profile', authenticateToken, asyncHandler(async (req: Request, res:
 }));
 
 //* verified
+router.get('/documents', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    console.log("User id:", userId);
+
+    const user = await prisma.user.findFirst({
+      where: { id: userId },
+      include: {
+        medicalRecord: {
+          select: {
+            id: true,
+            documents: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json(user);
+  } catch (error) {
+    console.error("Profile error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}));
+
+//* verified
 router.put('/profile', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
@@ -204,7 +233,7 @@ router.put('/profile', authenticateToken, asyncHandler(async (req: Request, res:
 
     if (Object.keys(req.body).some(key => ['dob', 'gender', 'address'].includes(key))) {
       const updateData: any = {};
-      if ('dob' in req.body) updateData.dob = dob;
+      if ('dob' in req.body) updateData.dob = new Date(dob);
       if ('gender' in req.body) updateData.gender = gender;
       if ('address' in req.body) updateData.address = address;
 
@@ -336,7 +365,7 @@ router.get("/admin-route", authenticateToken, asyncHandler(async (req: Request, 
       }
     });
 
-    res.status(200).json({"Message" : "Admin role updated for user!"})
+    res.status(200).json({ "Message": "Admin role updated for user!" })
   } catch (error) {
     console.error("Error in catch block", error);
     res.status(500).json({ "message": "Internal Server Error!" });
@@ -354,7 +383,7 @@ router.get("/doctor-route", authenticateToken, asyncHandler(async (req: Request,
       }
     });
 
-    res.status(200).json({"Message" : "Doctor role updated for user!"})
+    res.status(200).json({ "Message": "Doctor role updated for user!" })
   } catch (error) {
     console.error("Error in catch block", error);
     res.status(500).json({ "message": "Internal Server Error!" });

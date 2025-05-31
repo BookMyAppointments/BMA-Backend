@@ -27,32 +27,45 @@ router.post('/upload', authenticateToken, upload.single('file'), asyncHandler(as
             },
         );
 
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
         const uploadResult = await imageUploadUtil.imageUploadUtil(req.file.buffer, req.file.mimetype);
 
         if (!uploadResult) {
             return res.status(500).json({ success: false, message: "File upload failed" });
+        }        const returnUrl = uploadResult.secure_url;
+
+        // Check if user already has a medical record
+        if (user.medicalRecord && user.medicalRecord.length > 0) {
+            // Update existing medical record
+            const existingRecord = user.medicalRecord[0];
+            const updatedDocuments = [...existingRecord.documents, returnUrl];
+            
+            await prisma.medicalRecord.update({
+                where: { userId: user.id },
+                data: {
+                    documents: updatedDocuments,
+                },
+            });
+        } else {
+            // Create new medical record
+            await prisma.medicalRecord.create({
+                data: {
+                    documents: [returnUrl],
+                    history: [],
+                    user: {
+                        connect: { id: user.id },
+                    },
+                },
+            });
         }
-
-        const returnUrl = uploadResult.secure_url;
-
-        const documents = user?.medicalRecord?.documents || [];
-        documents.push(returnUrl);
-
-        await prisma.user.update({
-            where: { id },
-            data: {
-                medicalRecord: {
-                    create: {
-                        documents: documents,
-                    }
-                }
-            }
-        });
-
         res.status(201).json({
             success: true,
             url: returnUrl,
         });
+
     } catch (error: any) {
         console.error(error);
         res.status(500).json({ success: false, message: error.message || 'Upload failed' });
@@ -80,6 +93,7 @@ router.post('/upload-picture', authenticateToken, upload.single('file'), asyncHa
         }
 
         const returnUrl = uploadResult.secure_url;
+        console.log(returnUrl);
 
         await prisma.profile.update({
             where: { id },

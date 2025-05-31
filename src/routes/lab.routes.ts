@@ -84,6 +84,29 @@ router.get('/get/:hospitalId', asyncHandler(async (req: Request, res: Response) 
     res.status(200).json(labs);
 }));
 
+// Get all labs (public) (verified**)
+router.get('/all', asyncHandler(async (req: Request, res: Response) => {
+    const { service } = req.query;
+
+    const where: any = {};
+
+    if (service) {
+        where.services = {
+            has: service as string
+        };
+    }
+
+    const labs = await prisma.lab.findMany({
+        where,
+        include: {
+            location: true,
+            hospital: true
+        }
+    });
+
+    res.status(200).json(labs);
+}));
+
 //* Get lab by ID (public) (verified**)
 router.get('/find/:id', asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
