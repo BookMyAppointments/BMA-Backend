@@ -14,6 +14,7 @@ interface MulterRequest extends Request {
 
 router.post('/upload', authenticateToken, upload.single('file'), asyncHandler(async (req: MulterRequest, res: Response) => {
     try {
+        
         if (!req.file) {
             return res.status(400).json({ success: false, message: "File is required" });
         }
@@ -79,7 +80,6 @@ router.post('/upload-picture', authenticateToken, upload.single('file'), asyncHa
         }
 
         const id = (req as any).user.id;
-
         const user = await prisma.user.findFirst(
             {
                 where: { id },
@@ -93,14 +93,20 @@ router.post('/upload-picture', authenticateToken, upload.single('file'), asyncHa
         }
 
         const returnUrl = uploadResult.secure_url;
-        console.log(returnUrl);
 
-        await prisma.profile.update({
-            where: { id },
-            data: {
-                picture: returnUrl,
-            }
-        });
+        await prisma.profile.upsert({
+  where: { userId: id },
+  update: { picture: returnUrl },
+  create: {
+    picture: returnUrl,
+    user:{
+        connect:{
+        id
+        }
+    }
+  },
+});
+
 
         res.status(201).json({
             success: true,

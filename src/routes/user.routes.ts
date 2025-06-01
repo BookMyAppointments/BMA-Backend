@@ -162,7 +162,8 @@ router.get('/profile', authenticateToken, asyncHandler(async (req: Request, res:
             userId: true,
             gender: true,
             dob: true,
-            address: true
+            address: true,
+            picture:true
           }
         }
       }
@@ -188,12 +189,7 @@ router.get('/documents', authenticateToken, asyncHandler(async (req: Request, re
     const user = await prisma.user.findFirst({
       where: { id: userId },
       include: {
-        medicalRecord: {
-          select: {
-            id: true,
-            documents: true
-          }
-        }
+        medicalRecord: true
       }
     });
 
@@ -387,6 +383,43 @@ router.get("/doctor-route", authenticateToken, asyncHandler(async (req: Request,
   } catch (error) {
     console.error("Error in catch block", error);
     res.status(500).json({ "message": "Internal Server Error!" });
+  }
+}));
+
+router.delete('/documents/:documentUrl', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    const documentUrl = decodeURIComponent(req.params.documentUrl);
+
+    const user = await prisma.user.findFirst({
+      where: { id: userId },
+      include: 
+{        medicalRecord: {
+where:{
+  documents:{
+    has:documentUrl
+  }
+}
+}
+  }});
+
+    if (!user || !user.medicalRecord) {
+      return res.status(404).json({ message: "User or medical record not found" });
+    }
+    
+    const updatedDocuments = user.medicalRecord[0].documents.filter(doc => doc !== documentUrl);
+
+    await prisma.medicalRecord.update({
+      where: { userId },
+      data: {
+        documents: updatedDocuments
+      }
+    });
+
+    return res.status(200).json({ message: "Document deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting document:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 }));
 
