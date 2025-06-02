@@ -12,6 +12,8 @@ const router = Router();
 //* Create a new appointment (doctor or lab test) (verified**)
 router.post('/create', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
+        console.log("reached here2");
+        
         const userId = (req as any).user.id;
         const { doctorId, labId, testId, scheduledAt } = req.body;
 
@@ -84,7 +86,6 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
                 slot.startTime <= timeStr &&
                 slot.endTime >= timeStr
             );
-
             if (!doctorAvailable) {
                 return res.status(400).json({ 
                     message: "Doctor is not available at this time",
@@ -332,7 +333,6 @@ router.patch('/reschedule/:id', authenticateToken, asyncHandler(async (req: Requ
                 slot.startTime <= timeStr &&
                 slot.endTime >= timeStr
             );
-
             if (!doctorAvailable) {
                 return res.status(400).json({ 
                     message: "Doctor is not available at the new time",

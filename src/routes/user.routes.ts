@@ -6,8 +6,10 @@ import jwt from 'jsonwebtoken';
 import { authenticateToken } from '../middlewares/auth.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
 import { generateVerificationCode } from '../utils/helpers';
+import { OAuth2Client } from 'google-auth-library';
 
 const router = Router();
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 //* verified
 router.post('/signup', asyncHandler(async (req: Request, res: Response) => {
@@ -264,13 +266,10 @@ router.post('/reset-password/request', asyncHandler(async (req: Request, res: Re
     const user = await prisma.user.findUnique({
       where: { email }
     });
-
     if (!user) {
       return res.status(200).json({ message: "If the email exists, a reset code has been sent" });
     }
-
     const resetCode = generateVerificationCode();
-
     await prisma.user.update({
       where: { email },
       data: {
@@ -279,6 +278,8 @@ router.post('/reset-password/request', asyncHandler(async (req: Request, res: Re
     });
 
     const emailResult = await sendVerificationEmail(email, resetCode, 'reset');
+    console.log(emailResult);
+    
     if (!emailResult.success) {
       return res.status(500).json({ message: "Failed to send reset code" });
     }
@@ -293,7 +294,7 @@ router.post('/reset-password/request', asyncHandler(async (req: Request, res: Re
 //* verified
 router.post('/reset-password/verify', asyncHandler(async (req: Request, res: Response) => {
   try {
-    const { email, code } = req.body;
+    const { email, code ,password:newPassword} = req.body;
 
     if (!email || !code) {
       return res.status(400).json({ message: "Email and reset code are required" });
@@ -307,11 +308,18 @@ router.post('/reset-password/verify', asyncHandler(async (req: Request, res: Res
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (user.verifyCode !== code) {
+    if (user.verifyCode?.toLowerCase() !== String(code)) {
       return res.status(400).json({ message: "Invalid Verification Code!!" });
     }
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    return res.status(200).json({ message: "Reset code verified" });
+   const updatedUser= await prisma.user.update({
+      where: { email },
+      data: {
+        password: hashedPassword,
+      }
+    });
+    return res.status(201).json({message:"Password Updated Succesfully"})
   } catch (error) {
     console.error("Reset code verification error:", error);
     return res.status(500).json({ message: "Internal server error" });
@@ -334,15 +342,8 @@ router.post('/reset-password', asyncHandler(async (req: Request, res: Response) 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    await prisma.user.update({
-      where: { email },
-      data: {
-        password: hashedPassword,
-      }
-    });
-
+    
+    
     return res.status(200).json({ message: "Password reset successfully" });
   } catch (error) {
     console.error("Password reset error:", error);
@@ -419,6 +420,66 @@ where:{
     return res.status(200).json({ message: "Document deleted successfully" });
   } catch (error) {
     console.error("Error deleting document:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}));
+
+router.post('/google', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { token } = req.body;
+    
+    if (!token) {
+      return res.status(400).json({ message: "Google token is required" });
+    }
+
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload) {
+      return res.status(400).json({ message: "Invalid Google token" });
+    }
+
+    const { email, name, picture } = payload;
+
+    let user = await prisma.user.findUnique({
+      where: { email: email! }
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: email!,
+          name: name!,
+          password: '',
+          role: 'PATIENT',
+          verified: true,
+          profile: {
+            create: {
+              picture: picture
+            }
+          }
+        }
+      });
+    }
+
+    const jwtToken = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET!,
+      { expiresIn: '7d' }
+    );
+
+    const { password: _, ...userWithoutPassword } = user;
+
+    return res.status(200).json({
+      message: "Login successful",
+      user: userWithoutPassword,
+      token: jwtToken
+    });
+  } catch (error) {
+    console.error("Google auth error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 }));

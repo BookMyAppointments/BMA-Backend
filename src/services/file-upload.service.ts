@@ -78,8 +78,11 @@ router.post('/upload-picture', authenticateToken, upload.single('file'), asyncHa
         if (!req.file) {
             return res.status(400).json({ success: false, message: "Picture is required" });
         }
+console.log("hello from api");
 
         const id = (req as any).user.id;
+console.log(id);
+
         const user = await prisma.user.findFirst(
             {
                 where: { id },
@@ -93,6 +96,7 @@ router.post('/upload-picture', authenticateToken, upload.single('file'), asyncHa
         }
 
         const returnUrl = uploadResult.secure_url;
+        console.log("url is ",returnUrl);
 
         await prisma.profile.upsert({
   where: { userId: id },

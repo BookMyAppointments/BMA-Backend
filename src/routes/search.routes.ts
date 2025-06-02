@@ -51,6 +51,7 @@ router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
                 }
             }
         });
+console.log(doctors);
 
         res.status(200).json(doctors);
     } catch (error) {
@@ -115,6 +116,54 @@ router.get('/hospitals', asyncHandler(async (req: Request, res: Response) => {
         res.status(200).json(hospitals);
     } catch (error) {
         console.error("Error searching hospitals:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}));
+
+router.get('/labs', asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const { name, lat, lng, radius, service } = req.query;
+
+        const where: any = {
+            name: name ? { contains: name as string, mode: 'insensitive' } : undefined,
+            services: service ? { has: service as string } : undefined
+        };
+
+        let labs = await prisma.lab.findMany({
+            where,
+            include: {
+                location: true,
+                hospital: {
+                    include: {
+                        location: true
+                    }
+                }
+            }
+        });
+        
+
+        if (lat && lng && radius) {
+            const userLat = parseFloat(lat as string);
+            const userLng = parseFloat(lng as string);
+            const searchRadius = parseFloat(radius as string);
+
+            labs = labs.filter(lab => {
+                if (!lab.location) return false;
+
+                const distance = calculateDistance(
+                    userLat,
+                    userLng,
+                    lab.location.lat,
+                    lab.location.lng
+                );
+
+                return distance <= searchRadius;
+            });
+        }
+
+        res.status(200).json(labs);
+    } catch (error) {
+        console.error("Error searching labs:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 }));

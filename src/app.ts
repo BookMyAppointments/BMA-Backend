@@ -24,7 +24,7 @@ app.use(cors({
 }));
 
 app.get('/', (req, res) => {
-    res.send('Hello, BookMyApppointment!');
+    res.send('Hello, BookMyAppointments!');
 });
 
 app.use("/api/v1/auth", authRoutes); //* all-verified & tested

@@ -389,7 +389,6 @@ router.get('/appointments', authenticateToken, isDoctor, asyncHandler(async (req
 router.get('/get/:id', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-
     const doctor = await prisma.doctor.findUnique({
       where: { id },
       include: {
