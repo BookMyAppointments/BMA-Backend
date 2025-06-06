@@ -16,6 +16,8 @@ import file_uploadRoutes from './services/file-upload.service';
 dotenv.config();
 const app: Application = express();
 
+
+
 // Middleware
 app.use(express.json());
 app.use(cors({
@@ -24,7 +26,7 @@ app.use(cors({
 }));
 
 app.get('/', (req, res) => {
-    res.send('Hello, BookMyAppointments!');
+    res.send('Hello, BookMyApppointment!');
 });
 
 app.use("/api/v1/auth", authRoutes); //* all-verified & tested
