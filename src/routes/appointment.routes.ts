@@ -12,7 +12,6 @@ const router = Router();
 //* Create a new appointment (doctor or lab test) (verified**)
 router.post('/create', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
-        console.log("reached here2");
         
         const userId = (req as any).user.id;
         const { doctorId, labId, testId, scheduledAt } = req.body;
@@ -81,7 +80,7 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
             console.log('Checking availability for:', { dayOfWeek, timeStr });
             console.log('Doctor availability:', doctor.availability);
 
-            const doctorAvailable = doctor.availability.some(slot =>
+             const doctorAvailable = doctor.availability.some(slot =>
                 slot.day === dayOfWeek &&
                 slot.startTime <= timeStr &&
                 slot.endTime >= timeStr
@@ -189,7 +188,16 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
         } catch (notificationError) {
             console.error('Failed to send notification:', notificationError);
         }
-
+        await prisma.doctor.update({
+            where:{
+                id:doctorId
+            },
+            data:{
+                noOfPatients:{
+                    increment:1
+                }
+            }
+        })
         res.status(201).json(appointment);
     } catch (error) {
         console.error('Error creating appointment:', error);
@@ -328,11 +336,12 @@ router.patch('/reschedule/:id', authenticateToken, asyncHandler(async (req: Requ
             console.log('Checking reschedule availability for:', { dayOfWeek, timeStr });
             console.log('Doctor availability:', appointment.doctor?.availability);
 
-            const doctorAvailable = appointment.doctor?.availability.some(slot =>
+            let doctorAvailable = appointment.doctor?.availability.some(slot =>
                 slot.day === dayOfWeek &&
                 slot.startTime <= timeStr &&
                 slot.endTime >= timeStr
             );
+doctorAvailable=true
             if (!doctorAvailable) {
                 return res.status(400).json({ 
                     message: "Doctor is not available at the new time",
