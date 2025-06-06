@@ -327,22 +327,31 @@ router.post('/reset-password/verify', asyncHandler(async (req: Request, res: Res
 }));
 
 //* verified
-router.post('/reset-password', asyncHandler(async (req: Request, res: Response) => {
+router.post('/reset-password', authenticateToken,asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, newPassword } = req.body;
+    const id=(req as any).user.id
 
-    if (!email || !newPassword) {
-      return res.status(400).json({ message: "Email, reset code, and new password are required" });
-    }
+    // if (!email || !newPassword) {
+    //   return res.status(400).json({ message: "Email, reset code, and new password are required" });
+    // }
 
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { id }
     });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    
+
+    await prisma.user.update({
+      where:{
+        id
+      },
+      data:{
+        password:await bcrypt.hash(newPassword,10)
+      }
+    })
     
     return res.status(200).json({ message: "Password reset successfully" });
   } catch (error) {
