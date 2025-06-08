@@ -329,21 +329,22 @@ router.post('/reset-password/verify', asyncHandler(async (req: Request, res: Res
 //* verified
 router.post('/reset-password', authenticateToken,asyncHandler(async (req: Request, res: Response) => {
   try {
-    const { email, newPassword } = req.body;
+    const { originalPassword,newPassword }:{originalPassword:string,newPassword:string} = req.body;
     const id=(req as any).user.id
-
-    // if (!email || !newPassword) {
-    //   return res.status(400).json({ message: "Email, reset code, and new password are required" });
-    // }
-
+    
+    
+    
     const user = await prisma.user.findUnique({
       where: { id }
     });
-
+    
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-
+    const checkResult=await bcrypt.compare(originalPassword,user.password)
+  if(!checkResult){
+    return res.status(400).json({ message: "Existing password not matched" });
+  }
     await prisma.user.update({
       where:{
         id
@@ -489,6 +490,68 @@ router.post('/google', asyncHandler(async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Google auth error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}));
+
+//* verified
+router.post('/send-verification-code', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        email,
+        id: { not: userId }
+      }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ message: "Email is already in use" });
+    }
+
+    const verifyCode = generateVerificationCode();
+    
+    // Update current user with new verification code
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        verifyCode,
+        verified: false,
+        email 
+      }
+    });
+
+    const emailResult = await sendVerificationEmail(email, verifyCode, 'signup');
+    if (!emailResult.success) {
+      // Revert the user update since email sending failed
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          email: currentUser.email, // Use stored original email
+          verified: currentUser.verified, // Use stored original verification status
+          verifyCode: null
+        }
+      });
+      return res.status(500).json({ message: "Failed to send verification email. Please try again." });
+    }
+
+    res.status(200).json({ message: "Verification code sent successfully" });
+  } catch (error) {
+    console.error("Send verification code error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 }));
