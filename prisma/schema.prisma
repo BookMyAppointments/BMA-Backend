@@ -74,6 +74,7 @@ model Doctor {
   appointments   Appointment[]
   user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   noOfPatients  Int @default(0)
+  
 }
 
 model DoctorHospital {
@@ -82,7 +83,7 @@ model DoctorHospital {
   hospitalId String
   doctor     Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   hospital   Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  
+  isEmergency Boolean @default(false)
   @@unique([doctorId, hospitalId])
 }
 
