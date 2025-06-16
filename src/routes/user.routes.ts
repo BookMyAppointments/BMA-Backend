@@ -298,9 +298,10 @@ router.post('/reset-password/verify', asyncHandler(async (req: Request, res: Res
   try {
     const { email, code ,password:newPassword} = req.body;
 
-    if (!email || !code) {
-      return res.status(400).json({ message: "Email and reset code are required" });
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ message: "Email, reset-code and password are required" });
     }
+    
 
     const user = await prisma.user.findUnique({
       where: { email }
