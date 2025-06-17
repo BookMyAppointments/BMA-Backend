@@ -11,7 +11,7 @@
     "seed": "tsx src/seed.ts"
   },
   "prisma": {
-    "seed": "tsx seed.ts"
+    "seed": "tsx src/seed.ts"
   },
   "keywords": [],
   "author": "nishantchahar07 <nishantchahar20@gmail.com>",

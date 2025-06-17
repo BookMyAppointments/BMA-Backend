@@ -33,6 +33,7 @@ CREATE TABLE "Profile" (
     "gender" TEXT,
     "dob" TIMESTAMP(3),
     "address" TEXT,
+    "picture" TEXT,
     "locationId" TEXT,
 
     CONSTRAINT "Profile_pkey" PRIMARY KEY ("id")
@@ -56,7 +57,9 @@ CREATE TABLE "Doctor" (
     "specialization" TEXT[],
     "qualifications" TEXT[],
     "ratings" DOUBLE PRECISION,
+    "about" TEXT,
     "price" DOUBLE PRECISION NOT NULL,
+    "noOfPatients" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "Doctor_pkey" PRIMARY KEY ("id")
 );
@@ -66,6 +69,7 @@ CREATE TABLE "DoctorHospital" (
     "id" TEXT NOT NULL,
     "doctorId" TEXT NOT NULL,
     "hospitalId" TEXT NOT NULL,
+    "isEmergency" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "DoctorHospital_pkey" PRIMARY KEY ("id")
 );
@@ -101,7 +105,7 @@ CREATE TABLE "Hospital" (
     "departments" TEXT[],
     "facilities" TEXT[],
     "services" TEXT[],
-    "hours" TEXT NOT NULL,
+    "hours" JSONB NOT NULL,
     "locationId" TEXT NOT NULL,
 
     CONSTRAINT "Hospital_pkey" PRIMARY KEY ("id")
@@ -248,6 +252,9 @@ CREATE UNIQUE INDEX "DoctorHospital_doctorId_hospitalId_key" ON "DoctorHospital"
 
 -- CreateIndex
 CREATE UNIQUE INDEX "MedicalRecord_userId_key" ON "MedicalRecord"("userId");
+
+-- CreateIndex
+CREATE INDEX "MedicalRecord_userId_idx" ON "MedicalRecord"("userId");
 
 -- AddForeignKey
 ALTER TABLE "Profile" ADD CONSTRAINT "Profile_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "Location"("id") ON DELETE SET NULL ON UPDATE CASCADE;

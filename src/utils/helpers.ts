@@ -28,7 +28,6 @@ export const formatDate = (date: Date | string, format = 'yyyy-MM-dd'): string =
   .replace('dd', d.getDate().toString().padStart(2, '0'));
 };
 
-
 export const generateRandomHex = (bytes = 32): string => {
   return crypto.randomBytes(bytes).toString('hex');
 };

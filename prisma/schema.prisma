@@ -117,7 +117,7 @@ model Hospital {
   departments String[]
   facilities  String[]
   services    String[]
-  hours       String
+  hours       Json
   locationId  String
   location    Location         @relation(fields: [locationId], references: [id])
   doctors     DoctorHospital[]

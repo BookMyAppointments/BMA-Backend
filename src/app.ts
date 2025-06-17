@@ -16,12 +16,10 @@ import file_uploadRoutes from './services/file-upload.service';
 dotenv.config();
 const app: Application = express();
 
-
-
 // Middleware
 app.use(express.json());
 app.use(cors({
-    origin: [process.env.CORS_ORIGIN || 'http://localhost:5173', 'https://doctor-frontend-sigma.vercel.app'],
+    origin: [process.env.CORS_ORIGIN || 'http://localhost:5173', 'http://localhost:3000', 'https://doctor-frontend-sigma.vercel.app'],
     credentials: true,
 }));
 

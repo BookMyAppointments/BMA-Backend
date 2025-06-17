@@ -146,7 +146,15 @@ async function createHospitals(createdLocations: any[]) {
     departments: getRandomElements(departments, Math.floor(Math.random() * 6) + 4),
     facilities: getRandomElements(facilities, Math.floor(Math.random() * 5) + 3),
     services: getRandomElements(services, Math.floor(Math.random() * 4) + 3),
-    hours: '24/7',
+    hours: {
+      monday: { open: '09:00', close: '18:00', closed: false },
+      tuesday: { open: '09:00', close: '18:00', closed: false },
+      wednesday: { open: '09:00', close: '18:00', closed: false },
+      thursday: { open: '09:00', close: '18:00', closed: false },
+      friday: { open: '09:00', close: '18:00', closed: false },
+      saturday: { open: '09:00', close: '14:00', closed: false },
+      sunday: { open: '', close: '', closed: true }
+    },
     locationId: createdLocations[index % createdLocations.length].id
   }));
 

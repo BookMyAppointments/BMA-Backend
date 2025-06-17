@@ -12,7 +12,7 @@ const router = Router();
 //* Search doctors by name/specialization (verified**)
 router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
     try {
-        const { name, specialization, hospitalId,isEmergency } = req.query;
+        const { name, specialization, hospitalId, isEmergency } = req.query;
 
         const where: any = {
             doctor: {
@@ -26,7 +26,7 @@ router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
         if (hospitalId) {
             where.hospitalId = hospitalId as string;
         }
-        if(isEmergency)where.isEmergency=true
+        if (isEmergency) where.isEmergency = true
 
         const doctors = await prisma.doctorHospital.findMany({
             where,
