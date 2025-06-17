@@ -177,7 +177,7 @@ router.put('/update/:id', authenticateToken, isAdmin, asyncHandler(async (req: R
 }));
 
 //* Delete lab (Admin only) (verified**)
-router.delete('/update/:id', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+router.delete('/delete/:id', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
     // Get lab to delete (with location)
