@@ -7,95 +7,80 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ========== AUTH & USER MGMT ==========
-
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
+  id            String          @id @default(uuid())
+  email         String          @unique
   password      String
   name          String
   phone         String?
-  role          Role
   verifyCode    String?
-  verified      Boolean        @default(false)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  profile       Profile?
-  tokens        Token[]
+  verified      Boolean         @default(false)
+  gender        String?
+  dob           DateTime?
+  address       String?
+  picture       String?
+  locationId    String?
+  role          Role            @default(NORMAL)
   medicalRecord MedicalRecord[]
   appointments  Appointment[]
   testResults   TestResult[]
   notifications Notification[]
-  payments      Payment[]
-  doctor        Doctor?
   reviews       Review[]
+  location      Location?       @relation(fields: [locationId], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 }
-
-model Profile {
-  id         String    @id @default(uuid())
-  userId     String    @unique
-  gender     String?
-  dob        DateTime?
-  address    String?
-  picture   String?
-  locationId String?
-  location   Location? @relation(fields: [locationId], references: [id])
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-enum Role {
-  PATIENT
-  DOCTOR
-  ADMIN
-}
-
-model Token {
-  id        String   @id @default(uuid())
-  userId    String
-  token     String
-  type      String
-  expiresAt DateTime
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// ========== DOCTOR MGMT ==========
 
 model Doctor {
-  id             String           @id @default(uuid())
-  userId         String           @unique
+  id             String         @id @default(uuid())
+  email          String
+  name           String
+  phone          String?
   specialization String[]
   qualifications String[]
   ratings        Float?
   about          String?
   price          Float
+  noOfPatients   Int            @default(0)
   reviews        Review[]
   availability   Availability[]
-  affiliations   DoctorHospital[]
   appointments   Appointment[]
-  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  noOfPatients  Int @default(0)
-  
+  hospitalId     String?
+  hospital       Hospital?      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 }
 
-model DoctorHospital {
-  id         String   @id @default(uuid())
-  doctorId   String
-  hospitalId String
-  doctor     Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  hospital   Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  isEmergency Boolean @default(false)
-  @@unique([doctorId, hospitalId])
+model Hospital {
+  id           String   @id @default(uuid())
+  name         String
+  picture      String?
+  description  String?
+  banner       String?
+  address      String?
+  departments  String[]
+  facilities   String[]
+  services     String[]
+  hours        Json
+  noOfPatients Int      @default(0)
+  reviews      Review[]
+  doctors      Doctor[]
+  labs         Lab[]
+  locationId   String
+  location     Location @relation(fields: [locationId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Review {
-  id        String   @id @default(uuid())
-  doctorId  String
-  userId    String
-  rating    Int
-  comment   String?
-  createdAt DateTime @default(now())
-  doctor    Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String    @id @default(uuid())
+  userId     String?
+  rating     Int
+  comment    String?
+  doctorId   String?
+  hospitalId String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  doctor     Doctor?   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  hospital   Hospital? @relation(fields: [hospitalId], references: [id])
+  createdAt  DateTime  @default(now())
 }
 
 model Availability {
@@ -109,47 +94,28 @@ model Availability {
   labId     String?
 }
 
-// ========== HOSPITAL/LAB MGMT ==========
-
-model Hospital {
-  id          String           @id @default(uuid())
-  name        String
-  departments String[]
-  facilities  String[]
-  services    String[]
-  hours       Json
-  locationId  String
-  location    Location         @relation(fields: [locationId], references: [id])
-  doctors     DoctorHospital[]
-  labs        Lab[]
-}
-
 model Lab {
   id           String         @id @default(uuid())
-  hospitalId   String
   name         String
   services     String[]
   locationId   String
   availability Availability[]
   location     Location       @relation(fields: [locationId], references: [id])
+  hospitalId   String?
   tests        MedicalTest[]
-  hospital     Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospital     Hospital?      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   appointments Appointment[]
 }
-
-// ========== LOCATION ==========
 
 model Location {
   id        String     @id @default(uuid())
   lat       Float
   lng       Float
   address   String
-  profiles  Profile[]
   hospitals Hospital[]
+  users     User[]
   labs      Lab[]
 }
-
-// ========== APPOINTMENTS ==========
 
 model Appointment {
   id            String            @id @default(uuid())
@@ -175,8 +141,6 @@ enum AppointmentStatus {
   RESCHEDULED
 }
 
-// ========== MEDICAL TESTS ==========
-
 model MedicalTest {
   id           String        @id @default(uuid())
   name         String
@@ -199,8 +163,6 @@ model TestResult {
   test     MedicalTest @relation(fields: [testId], references: [id], onDelete: Cascade)
 }
 
-// ========== NOTIFICATIONS ==========
-
 model Notification {
   id        String            @id @default(uuid())
   userId    String
@@ -210,8 +172,6 @@ model Notification {
   createdAt DateTime          @default(now())
   user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
-
-// ========== MEDICAL HISTORY ==========
 
 model MedicalRecord {
   id        String   @id @default(uuid())
@@ -223,58 +183,8 @@ model MedicalRecord {
   @@index([userId])
 }
 
-// ========== PAYMENT ==========
-
-model Payment {
-  id         String        @id @default(uuid())
-  userId     String
-  amount     Float
-  method     PaymentMethod
-  status     PaymentStatus
-  paidAt     DateTime
-  refundAt   DateTime?
-  invoiceUrl String?
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-enum PaymentMethod {
-  UPI
-  CARD
-  NET_BANKING
-  CASH
-}
-
-enum PaymentStatus {
-  PAID
-  REFUNDED
-  FAILED
-}
-
-// ========== ANALYTICS (LOG TABLES) ==========
-
-model AnalyticsLog {
-  id        String   @id @default(uuid())
-  event     String
-  userId    String?
-  createdAt DateTime @default(now())
-  data      Json
-}
-
-// ========== INTEGRATION CONFIG ==========
-
-model Integration {
-  id      String  @id @default(uuid())
-  name    String
-  config  Json
-  enabled Boolean @default(true)
-}
-
-// ========== API META ==========
-
-model ApiMeta {
-  id         String @id @default(uuid())
-  version    String
-  rateLimit  Int
-  errorCodes Json
-  docsUrl    String
+enum Role {
+  NORMAL
+  ADMIN
+  SUPERADMIN
 }

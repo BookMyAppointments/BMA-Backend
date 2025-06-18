@@ -4,15 +4,16 @@ import { authenticateToken } from '../middlewares/auth.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
 import { isDoctor } from '../middlewares/doctor.middleware';
 import { Doctor, Review } from '@prisma/client';
+import { isAdmin } from '../middlewares/admin.middleware';
 
 const router = Router();
 
 //* ------------------------- DOCTOR PROFILE OPERATIONS ------------------------- *//
 
 //* Add a new doctor profile (verified**)
-router.post('/create', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
+router.post('/create/:hospitalId/:userId', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
+    const { hospitalId, userId } = req.params;
     const { specialization, qualifications, price, about }: Doctor = req.body;
 
     const existingDoctor = await prisma.doctor.findUnique({
@@ -21,6 +22,14 @@ router.post('/create', authenticateToken, isDoctor, asyncHandler(async (req: Req
 
     if (existingDoctor) {
       return res.status(400).json({ message: "Doctor profile already exists" });
+    }
+
+    const hospital = await prisma.hospital.findFirst({
+      where: { id: hospitalId }
+    });
+
+    if (!hospital) {
+      return res.status(400).json({ message: "This hospital does not exist!!" })
     }
 
     if (!Array.isArray(specialization) || !Array.isArray(qualifications)) {
@@ -49,6 +58,27 @@ router.post('/create', authenticateToken, isDoctor, asyncHandler(async (req: Req
             phone: true
           }
         }
+      }
+    });
+
+    const existingAffiliation = await prisma.doctorHospital.findFirst({
+      where: {
+        doctorId: doctor.id,
+        hospitalId
+      }
+    });
+
+    if (existingAffiliation) {
+      return res.status(400).json({ message: "Affiliation already exists!!" });
+    }
+
+    const affiliation = await prisma.doctorHospital.create({
+      data: {
+        doctorId: doctor.id,
+        hospitalId
+      },
+      include: {
+        hospital: true
       }
     });
 
@@ -104,6 +134,31 @@ router.get('/profile', authenticateToken, isDoctor, asyncHandler(async (req: Req
     res.status(200).json(doctor);
   } catch (error) {
     console.error("Error fetching doctor profile:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}));
+
+router.get("/search", authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { email } = req.query;
+
+    const doctor = await prisma.user.findFirst({
+      where: { email: email as string },
+      select: {
+        id: true,
+        name: true,
+        email: true
+      }
+    });
+
+    if (!doctor) {
+      return res.status(404).json({ message: "Doctor not found" });
+    }
+
+    res.status(200).json(doctor);
+
+  } catch (error) {
+    console.error("Error searching doctor by email:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 }));
