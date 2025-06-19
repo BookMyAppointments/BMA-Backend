@@ -125,19 +125,10 @@ router.get('/get/:id', asyncHandler(async (req: Request, res: Response) => {
             },
             doctors: {
                 include: {
-                    doctor: {
-                        include: {
-                            user: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                    profile: true
-                                }
-                            },
+                                
                             availability: true,
                             reviews: true
-                        }
-                    }
+                       
                 }
             }
         }

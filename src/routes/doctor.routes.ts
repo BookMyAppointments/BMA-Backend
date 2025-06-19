@@ -17,7 +17,7 @@ router.post('/create/:hospitalId/:userId', authenticateToken, isAdmin, asyncHand
     const { specialization, qualifications, price, about }: Doctor = req.body;
 
     const existingDoctor = await prisma.doctor.findUnique({
-      where: { userId }
+      where: { id:userId }
     });
 
     if (existingDoctor) {
@@ -43,22 +43,8 @@ router.post('/create/:hospitalId/:userId', authenticateToken, isAdmin, asyncHand
         price,
         about: about || "",
         ratings: 0,
-        user: {
-          connect: {
-            id: userId
-          }
-        }
+        
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true
-          }
-        }
-      }
     });
 
     const existingAffiliation = await prisma.doctorHospital.findFirst({
@@ -100,16 +86,8 @@ router.get('/profile', authenticateToken, isDoctor, asyncHandler(async (req: Req
     const userId = (req as any).user.id;
 
     const doctor = await prisma.doctor.findUnique({
-      where: { userId },
+      where: { id:userId },
       include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-          }
-        },
         reviews: {
           include: {
             user: {
@@ -170,27 +148,17 @@ router.put('/profile', authenticateToken, isDoctor, asyncHandler(async (req: Req
     const { specialization, qualifications, ratings, price, about }: Doctor = req.body;
 
     const doctor = await prisma.doctor.findUnique({
-      where: { userId }
+      where: { id:userId }
     });
 
     const updatedDoctor = await prisma.doctor.update({
-      where: { userId },
+      where: { id:userId },
       data: {
         specialization: specialization || doctor?.specialization,
         qualifications: qualifications || doctor?.qualifications,
         ratings: ratings || doctor?.ratings,
         price: price || doctor?.price,
         about: about || doctor?.about
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true
-          }
-        }
       }
     });
 
@@ -213,7 +181,7 @@ router.post('/availability', authenticateToken, isDoctor, asyncHandler(async (re
     const { day, startTime, endTime } = req.body;
 
     const doctor = await prisma.doctor.findUnique({
-      where: { userId },
+      where: { id:userId },
       select: { id: true }
     });
 
@@ -271,7 +239,7 @@ router.get('/availability', authenticateToken, isDoctor, asyncHandler(async (req
     const userId = (req as any).user.id;
 
     const doctor = await prisma.doctor.findUnique({
-      where: { userId },
+      where: { id:userId },
       select: { id: true }
     });
 
@@ -297,7 +265,7 @@ router.delete('/availability/:id', authenticateToken, isDoctor, asyncHandler(asy
     const { id } = req.params;
 
     const doctor = await prisma.doctor.findUnique({
-      where: { userId },
+      where: { id:userId },
       select: { id: true }
     });
 
@@ -376,7 +344,7 @@ router.get('/reviews', authenticateToken, asyncHandler(async (req: Request, res:
     const userId = (req as any).user.id;
 
     const doctor = await prisma.doctor.findUnique({
-      where: { userId },
+      where: { id:userId },
       select: { id: true }
     });
 
@@ -412,7 +380,7 @@ router.get('/appointments', authenticateToken, isDoctor, asyncHandler(async (req
     const userId = (req as any).user.id;
 
     const doctor = await prisma.doctor.findUnique({
-      where: { userId },
+      where: { id:userId },
       select: { id: true }
     });
 
@@ -447,13 +415,6 @@ router.get('/get/:id', asyncHandler(async (req: Request, res: Response) => {
     const doctor = await prisma.doctor.findUnique({
       where: { id },
       include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            profile: true
-          }
-        },
         availability: true,
         reviews: {
           include: {

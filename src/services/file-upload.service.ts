@@ -98,17 +98,11 @@ console.log(id);
         const returnUrl = uploadResult.secure_url;
         console.log("url is ",returnUrl);
 
-        await prisma.profile.upsert({
-  where: { userId: id },
-  update: { picture: returnUrl },
-  create: {
-    picture: returnUrl,
-    user:{
-        connect:{
-        id
-        }
-    }
-  },
+        await prisma.user.update({
+  where: { id: id },
+  data:{
+    picture:returnUrl
+  }
 });
 
 

@@ -145,11 +145,7 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
             },
             include: {
                 user: true,
-                doctor: {
-                    include: {
-                        user: true,
-                    }
-                },
+                doctor: true,
                 lab: true,
                 test: true
             }
@@ -157,9 +153,9 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
 
         // Send notifications
         try {
-            if (doctorId && appointment.doctor?.user.id) {
+            if (doctorId && appointment.doctor?.id) {
                 await sendNotification({
-                    userId: appointment.doctor.user.id,
+                    userId: appointment.doctor.id,
                     title: 'New Appointment Request',
                     message: `You have a new appointment request from ${appointment.user.name}`,
                     type: 'PENDING'
@@ -214,11 +210,7 @@ router.patch('/confirm/:id', authenticateToken, asyncHandler(async (req: Request
         const appointment = await prisma.appointment.findUnique({
             where: { id },
             include: {
-                doctor: {
-                    include: {
-                        user: true
-                    }
-                },
+                doctor: true,
                 user: true
             }
         });
@@ -227,7 +219,7 @@ router.patch('/confirm/:id', authenticateToken, asyncHandler(async (req: Request
             return res.status(404).json({ message: "Appointment not found" });
         }
 
-        if (appointment.doctor?.userId !== userId) {
+        if (appointment.doctor?.id !== userId) {
             return res.status(403).json({ message: "You can only confirm your own appointments" });
         }
 
@@ -242,11 +234,7 @@ router.patch('/confirm/:id', authenticateToken, asyncHandler(async (req: Request
             },
             include: {
                 user: true,
-                doctor: {
-                    include: {
-                        user: true
-                    }
-                }
+                doctor: true
             }
         });
 
@@ -254,7 +242,7 @@ router.patch('/confirm/:id', authenticateToken, asyncHandler(async (req: Request
             await sendNotification({
                 userId: updatedAppointment.userId,
                 title: 'Appointment Confirmed',
-                message: `Your appointment with Dr. ${updatedAppointment.doctor?.user.name} is confirmed for ${updatedAppointment.scheduledAt}`,
+                message: `Your appointment with Dr. ${updatedAppointment.doctor?.name} is confirmed for ${updatedAppointment.scheduledAt}`,
                 type: 'CONFIRMED'
             });
         } catch (notificationError) {
@@ -300,7 +288,6 @@ router.patch('/reschedule/:id', authenticateToken, asyncHandler(async (req: Requ
                 user: true,
                 doctor: {
                     include: {
-                        user: true,
                         availability: true
                     }
                 },
@@ -317,7 +304,7 @@ router.patch('/reschedule/:id', authenticateToken, asyncHandler(async (req: Requ
             return res.status(404).json({ message: "Appointment not found" });
         }
 
-        if (appointment.userId !== userId && appointment.doctor?.userId !== userId) {
+        if (appointment.userId !== userId && appointment.doctor?.id !== userId) {
             return res.status(403).json({ message: "You can only reschedule your own appointments" });
         }
 
@@ -413,11 +400,7 @@ doctorAvailable=true
             },
             include: {
                 user: true,
-                doctor: {
-                    include: {
-                        user: true
-                    }
-                },
+                doctor: true,
                 lab: true,
                 test: true
             }
@@ -426,7 +409,7 @@ doctorAvailable=true
         try {
             if (appointment.doctorId) {
                 const notificationRecipient = userId === appointment.userId ?
-                    appointment.doctor?.user.id! : appointment.userId;
+                    appointment.doctor?.id! : appointment.userId;
 
                 await sendNotification({
                     userId: notificationRecipient,
@@ -463,11 +446,7 @@ router.patch('/cancel/:id', authenticateToken, asyncHandler(async (req: Request,
             where: { id },
             include: {
                 user: true,
-                doctor: {
-                    include: {
-                        user: true
-                    }
-                },
+                doctor: true,
                 lab: true,
                 test: true
             }
@@ -498,11 +477,7 @@ router.patch('/cancel/:id', authenticateToken, asyncHandler(async (req: Request,
             },
             include: {
                 user: true,
-                doctor: {
-                    include: {
-                        user: true
-                    }
-                },
+                doctor: true,
                 lab: true,
                 test: true
             }
@@ -511,7 +486,7 @@ router.patch('/cancel/:id', authenticateToken, asyncHandler(async (req: Request,
         try {
             if (appointment.doctorId) {
                 const notificationRecipient = userId === appointment.userId ?
-                    appointment.doctor?.user.id! : appointment.userId;
+                    appointment.doctor?.id! : appointment.userId;
 
                 await sendNotification({
                     userId: notificationRecipient,
@@ -547,11 +522,7 @@ router.patch('/complete/:id', authenticateToken, asyncHandler(async (req: Reques
         const appointment = await prisma.appointment.findUnique({
             where: { id },
             include: {
-                doctor: {
-                    include: {
-                        user: true
-                    }
-                },
+                doctor: true,
                 user: true
             }
         });
@@ -560,7 +531,7 @@ router.patch('/complete/:id', authenticateToken, asyncHandler(async (req: Reques
             return res.status(404).json({ message: "Appointment not found" });
         }
 
-        if (!appointment.doctorId || appointment.doctor?.userId !== userId) {
+        if (!appointment.doctorId || appointment.doctor?.id !== userId) {
             return res.status(403).json({ message: "Only doctors can mark appointments as completed" });
         }
 
@@ -579,11 +550,7 @@ router.patch('/complete/:id', authenticateToken, asyncHandler(async (req: Reques
             },
             include: {
                 user: true,
-                doctor: {
-                    include: {
-                        user: true
-                    }
-                }
+                doctor: true
             }
         });
 
@@ -591,7 +558,7 @@ router.patch('/complete/:id', authenticateToken, asyncHandler(async (req: Reques
             await sendNotification({
                 userId: updatedAppointment.userId,
                 title: 'Appointment Completed',
-                message: `Your appointment with Dr. ${updatedAppointment.doctor?.user.name} has been marked as completed`,
+                message: `Your appointment with Dr. ${updatedAppointment.doctor?.name} has been marked as completed`,
                 type: 'COMPLETED'
             });
         } catch (notificationError) {
@@ -619,18 +586,9 @@ router.get('/get/:id', authenticateToken, asyncHandler(async (req: Request, res:
                         id: true,
                         name: true,
                         email: true,
-                        profile: true
                     }
                 },                doctor: {
                     include: {
-                        user: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                                profile: true
-                            }
-                        },
                         reviews: true
                     }
                 },
@@ -649,7 +607,7 @@ router.get('/get/:id', authenticateToken, asyncHandler(async (req: Request, res:
             return res.status(404).json({ message: "Appointment not found" });
         }
 
-        if (appointment.userId !== userId && appointment.doctor?.userId !== userId) {
+        if (appointment.userId !== userId && appointment.doctor?.id !== userId) {
             return res.status(403).json({ message: "You can only view your own appointments" });
         }
 

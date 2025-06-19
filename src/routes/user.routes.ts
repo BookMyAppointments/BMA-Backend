@@ -7,6 +7,7 @@ import { authenticateToken } from '../middlewares/auth.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
 import { generateVerificationCode } from '../utils/helpers';
 import { OAuth2Client } from 'google-auth-library';
+import { sendHospitalCreationMail } from '../emails/HospitalMail';
 
 const router = Router();
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -49,7 +50,7 @@ router.post('/signup', asyncHandler(async (req: Request, res: Response) => {
           name,
           phone: phone || null,
           verifyCode,
-          role: 'PATIENT',
+          role: 'NORMAL',
           verified: false
         }
       });
@@ -157,17 +158,8 @@ router.get('/profile', authenticateToken, asyncHandler(async (req: Request, res:
 
     const user = await prisma.user.findFirst({
       where: { id: userId },
-      include: {
-        profile: {
-          select: {
-            id: true,
-            userId: true,
-            gender: true,
-            dob: true,
-            address: true,
-            picture: true
-          }
-        }
+      include:{
+        requests:true
       }
     });
 
@@ -181,6 +173,99 @@ router.get('/profile', authenticateToken, asyncHandler(async (req: Request, res:
     return res.status(500).json({ message: "Internal server error" });
   }
 }));
+
+
+router.get('/requests/:requestId/:action', asyncHandler(authenticateToken), asyncHandler(async (req: Request, res: Response) => {
+  const { requestId, action } = req.params;
+  const adminId = (req as any).user.id;
+
+  try {
+    const admin = await prisma.user.findUnique({ where: { id: adminId } });
+    if (!admin || admin.role !== 'SUPERADMIN') {
+      return res.status(403).json({ message: "Unauthorized: Admin access required" });
+    }
+
+    const request = await prisma.request.findUnique({
+      where: { id: requestId },
+      include: { user: true }
+    });
+
+    if (!request) {
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL;
+    if (!frontendUrl) {
+      return res.status(500).json({ message: "FRONTEND_URL is not configured in environment" });
+    }
+
+    if (action === 'approve') {
+      try {
+        const [link] = await prisma.$transaction(async (tx) => {
+          const createdLink = await tx.link.create({
+            data: {
+              url: `${frontendUrl}/admin/hospital/create/32`, // You may want to replace hardcoded `32`
+              isActive: true
+            }
+          });
+
+          await tx.request.update({
+            where: { id: requestId },
+            data: { status: "ACTIVE" }
+          });
+
+          await tx.user.update({
+            where: { id: request.user.id },
+            data: { role: "ADMIN" }
+          });
+
+          return [createdLink];
+        });
+
+        await sendHospitalCreationMail({
+          email: request.user.email,
+          linkId: link.id,
+          frontendUrl
+        });
+
+        return res.status(200).json({
+          message: "Request approved and email sent",
+          linkId: link.id
+        });
+
+      } catch (txnError) {
+        console.error("Transaction error (approve):", txnError);
+        return res.status(500).json({ message: "Failed to approve request. No changes made." });
+      }
+    }
+
+    else if (action === 'reject') {
+      try {
+        await prisma.request.update({
+          where: { id: requestId },
+          data: { status: 'INACTIVE' }
+        });
+
+
+        return res.status(200).json({
+          message: "Request rejected successfully"
+        });
+
+      } catch (rejError) {
+        console.error("Rejection error:", rejError);
+        return res.status(500).json({ message: "Failed to reject request" });
+      }
+    }
+
+    return res.status(400).json({ message: "Invalid action" });
+
+  } catch (error) {
+    console.error("Request handler error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}));
+
+
 
 //* verified
 router.get('/documents', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
@@ -235,8 +320,8 @@ router.put('/profile', authenticateToken, asyncHandler(async (req: Request, res:
       if ('gender' in req.body) updateData.gender = gender;
       if ('address' in req.body) updateData.address = address;
 
-      await prisma.profile.upsert({
-        where: { userId },
+      await prisma.user.upsert({
+        where: { id:userId },
         update: updateData,
         create: {
           userId,
@@ -362,6 +447,49 @@ router.post('/reset-password', authenticateToken, asyncHandler(async (req: Reque
   }
 }));
 
+router.get("/admin-verify-code/:code",asyncHandler(async (req:Request,res:Response)=>{
+  const {code}=req.params
+  try{
+    const link=await prisma.link.findUnique({
+      where:{
+        id:code
+      }
+    }) 
+    if(!link)return res.status(401).json({message:"No link found against the code"})
+    const validLink=link.isActive
+  if(!validLink)return res.status(403).json({message:"Link is expired or used before"})
+    return res.status(201).json({message:"Link Verified"})
+  }
+  catch(err){
+return res.status(500).json({message:"Internal Server Error"})
+  }
+}))
+
+router.get("/admin-request-create",asyncHandler(authenticateToken),asyncHandler(async(req:Request,res:Response)=>{
+  const id=(req as any).user.id
+  try{const user=await prisma.user.findUnique({
+    where:{id}
+  })
+  if(!user)return res.status(404).json({message:"User not found"})
+    const createdRequest=await prisma.request.create({
+  data:{
+    userEmail:user.email,
+    user:{
+      connect:{
+        id:" "  // we have to give super-admin connection id here  
+      }
+    },
+    expiryTime:new Date(Date.now()+(7 * 24 * 60 * 60 * 1000))
+  }
+  })
+  return res.status(201).json({message:"Request Succesfully Created",request:createdRequest})
+  }
+catch(err){
+return res.status(500).json({message:"Internal Server Error"})
+}
+
+}))
+
 //* verified
 router.get("/admin-route", authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
@@ -381,22 +509,22 @@ router.get("/admin-route", authenticateToken, asyncHandler(async (req: Request, 
 }));
 
 //* verified
-router.get("/doctor-route", authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user.id;
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        role: "DOCTOR"
-      }
-    });
+// router.get("/doctor-route", authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+//   try {
+//     const userId = (req as any).user.id;
+//     await prisma.user.update({
+//       where: { id: userId },
+//       data: {
+//         role: "DOCTOR"
+//       }
+//     });
 
-    res.status(200).json({ "Message": "Doctor role updated for user!" })
-  } catch (error) {
-    console.error("Error in catch block", error);
-    res.status(500).json({ "message": "Internal Server Error!" });
-  }
-}));
+//     res.status(200).json({ "Message": "Doctor role updated for user!" })
+//   } catch (error) {
+//     console.error("Error in catch block", error);
+//     res.status(500).json({ "message": "Internal Server Error!" });
+//   }
+// }));
 
 router.delete('/documents/:documentUrl', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
@@ -467,13 +595,9 @@ router.post('/google', asyncHandler(async (req: Request, res: Response) => {
           email: email!,
           name: name!,
           password: '',
-          role: 'PATIENT',
+          role: 'NORMAL',
           verified: true,
-          profile: {
-            create: {
-              picture: picture
-            }
-          }
+          picture:picture
         }
       });
     }

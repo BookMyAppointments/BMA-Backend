@@ -18,6 +18,7 @@ model User {
   gender        String?
   dob           DateTime?
   address       String?
+  requests      Request[]
   picture       String?
   locationId    String?
   role          Role            @default(NORMAL)
@@ -191,7 +192,14 @@ model MedicalRecord {
 
   @@index([userId])
 }
-
+model Request{
+  id String @id @default(uuid())
+  userEmail String 
+  expiryTime DateTime 
+  userId String
+  status Status @default(PENDING)
+  user User @relation(fields: [userId], references: [id])
+}
 enum Role {
   NORMAL
   ADMIN

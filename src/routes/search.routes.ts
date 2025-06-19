@@ -346,37 +346,22 @@ router.get('/nearby', asyncHandler(async (req: Request, res: Response) => {
             });
         }
 
-        // Search doctors if type is not specified or includes doctors
         if (!type || (type as string).includes('doctors')) {
-            const doctorAffiliations = await prisma.doctorHospital.findMany({
+            const doctorAffiliations = await prisma.hospital.findMany({
                 include: {
-                    doctor: {
-                        include: {
-                            user: {
-                                select: {
-                                    id: true,
-                                    name: true
-                                }
-                            },
-                            availability: true
-                        }
-                    },
-                    hospital: {
-                        include: {
-                            location: true
-                        }
-                    }
+                    doctors:true,
+                    location:true
                 }
             });
 
             results.doctors = doctorAffiliations.filter(affiliation => {
-                if (!affiliation.hospital.location) return false;
+                if (!affiliation.location) return false;
 
                 const distance = calculateDistance(
                     userLat,
                     userLng,
-                    affiliation.hospital.location.lat,
-                    affiliation.hospital.location.lng
+                    affiliation.location.lat,
+                    affiliation.location.lng
                 );
 
                 return distance <= searchRadius;
