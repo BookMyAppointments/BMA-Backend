@@ -64,6 +64,7 @@ model Hospital {
   reviews      Review[]
   doctors      Doctor[]
   labs         Lab[]
+  status       Status   @default(ACTIVE)
   locationId   String
   location     Location @relation(fields: [locationId], references: [id])
   createdAt    DateTime @default(now())
@@ -81,6 +82,14 @@ model Review {
   doctor     Doctor?   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   hospital   Hospital? @relation(fields: [hospitalId], references: [id])
   createdAt  DateTime  @default(now())
+}
+
+model Link {
+  id        String   @id @default(uuid())
+  url       String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Availability {
@@ -187,4 +196,12 @@ enum Role {
   NORMAL
   ADMIN
   SUPERADMIN
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+  PENDING
+  SUSPENDED
+  DELETED
 }
