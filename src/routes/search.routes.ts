@@ -28,28 +28,20 @@ router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
         }
         if (isEmergency) where.isEmergency = true
 
-        const doctors = await prisma.doctorHospital.findMany({
+        const doctors = await prisma.doctor.findMany({
             where,
             include: {
-                doctor: {
-                    include: {
-                        user: {
-                            select: {
-                                id: true,
-                                name: true,
-                                email: true,
-                                profile: true
-                            }
-                        },
-                        availability: true,
-                        reviews: true
-                    }
-                },
+                availability: true,
+                reviews: true,
                 hospital: {
                     include: {
                         location: true
+                    },
+                    select: {
+                        id: true,
+                        name: true,
                     }
-                }
+                },
             }
         });
 
@@ -85,17 +77,9 @@ router.get('/hospitals', asyncHandler(async (req: Request, res: Response) => {
             include: {
                 location: true,
                 doctors: {
-                    include: {
-                        doctor: {
-                            include: {
-                                user: {
-                                    select: {
-                                        id: true,
-                                        name: true
-                                    }
-                                }
-                            }
-                        }
+                    select: {
+                        id: true,
+                        name: true,
                     }
                 },
                 labs: true
@@ -243,7 +227,6 @@ router.get('/appointments', authenticateToken, asyncHandler(async (req: Request,
         const where = {
             OR: [
                 { userId },
-                { doctor: { userId } }
             ],
             status: status ? status as AppointmentStatus : undefined
         };
@@ -258,13 +241,11 @@ router.get('/appointments', authenticateToken, asyncHandler(async (req: Request,
                     }
                 },
                 doctor: {
-                    include: {
-                        user: {
-                            select: {
-                                id: true,
-                                name: true
-                            }
-                        }
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        noOfPatients: true,
                     }
                 },
                 lab: {
@@ -349,8 +330,8 @@ router.get('/nearby', asyncHandler(async (req: Request, res: Response) => {
         if (!type || (type as string).includes('doctors')) {
             const doctorAffiliations = await prisma.hospital.findMany({
                 include: {
-                    doctors:true,
-                    location:true
+                    doctors: true,
+                    location: true
                 }
             });
 

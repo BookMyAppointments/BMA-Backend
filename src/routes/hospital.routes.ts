@@ -92,16 +92,12 @@ router.get('/get', asyncHandler(async (req: Request, res: Response) => {
             },
             doctors: {
                 include: {
-                    doctor: {
-                        include: {
-                            user: {
-                                select: {
-                                    id: true,
-                                    name: true
-                                }
-                            }
-                        }
-                    }
+                    availability: true,
+                    reviews: true
+                },
+                select: {
+                    id: true,
+                    name: true,
                 }
             }
         }
@@ -125,10 +121,10 @@ router.get('/get/:id', asyncHandler(async (req: Request, res: Response) => {
             },
             doctors: {
                 include: {
-                                
-                            availability: true,
-                            reviews: true
-                       
+
+                    availability: true,
+                    reviews: true
+
                 }
             }
         }

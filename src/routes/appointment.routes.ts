@@ -456,7 +456,7 @@ router.patch('/cancel/:id', authenticateToken, asyncHandler(async (req: Request,
             return res.status(404).json({ message: "Appointment not found" });
         }
 
-        if (appointment.userId !== userId && appointment.doctor?.userId !== userId) {
+        if (appointment.userId !== userId && appointment.doctor?.id !== userId) {
             return res.status(403).json({ message: "You can only cancel your own appointments" });
         }
 

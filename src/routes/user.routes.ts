@@ -150,120 +150,95 @@ router.post('/signin', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
-//* verified
-router.get('/profile', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user.id;
-    console.log("User id:", userId);
+// router.get('/requests/:requestId/:action', asyncHandler(authenticateToken), asyncHandler(async (req: Request, res: Response) => {
+//   const { requestId, action } = req.params;
+//   const adminId = (req as any).user.id;
 
-    const user = await prisma.user.findFirst({
-      where: { id: userId },
-      include:{
-        requests:true
-      }
-    });
+//   try {
+//     const admin = await prisma.user.findUnique({ where: { id: adminId } });
+//     if (!admin || admin.role !== 'SUPERADMIN') {
+//       return res.status(403).json({ message: "Unauthorized: Admin access required" });
+//     }
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+//     const request = await prisma.request.findUnique({
+//       where: { id: requestId },
+//       include: { user: true }
+//     });
 
-    return res.status(200).json(user);
-  } catch (error) {
-    console.error("Profile error:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-}));
+//     if (!request) {
+//       return res.status(404).json({ message: "Request not found" });
+//     }
 
+//     const frontendUrl = process.env.FRONTEND_URL;
+//     if (!frontendUrl) {
+//       return res.status(500).json({ message: "FRONTEND_URL is not configured in environment" });
+//     }
 
-router.get('/requests/:requestId/:action', asyncHandler(authenticateToken), asyncHandler(async (req: Request, res: Response) => {
-  const { requestId, action } = req.params;
-  const adminId = (req as any).user.id;
+//     if (action === 'approve') {
+//       try {
+//         const [link] = await prisma.$transaction(async (tx) => {
+//           const createdLink = await tx.link.create({
+//             data: {
+//               url: `${frontendUrl}/admin/hospital/create/32`, // You may want to replace hardcoded `32`
+//               isActive: true
+//             }
+//           });
 
-  try {
-    const admin = await prisma.user.findUnique({ where: { id: adminId } });
-    if (!admin || admin.role !== 'SUPERADMIN') {
-      return res.status(403).json({ message: "Unauthorized: Admin access required" });
-    }
+//           await tx.request.update({
+//             where: { id: requestId },
+//             data: { status: "ACTIVE" }
+//           });
 
-    const request = await prisma.request.findUnique({
-      where: { id: requestId },
-      include: { user: true }
-    });
+//           await tx.user.update({
+//             where: { id: request.user.id },
+//             data: { role: "ADMIN" }
+//           });
 
-    if (!request) {
-      return res.status(404).json({ message: "Request not found" });
-    }
+//           return [createdLink];
+//         });
 
-    const frontendUrl = process.env.FRONTEND_URL;
-    if (!frontendUrl) {
-      return res.status(500).json({ message: "FRONTEND_URL is not configured in environment" });
-    }
+//         await sendHospitalCreationMail({
+//           email: request.user.email,
+//           linkId: link.id,
+//           frontendUrl
+//         });
 
-    if (action === 'approve') {
-      try {
-        const [link] = await prisma.$transaction(async (tx) => {
-          const createdLink = await tx.link.create({
-            data: {
-              url: `${frontendUrl}/admin/hospital/create/32`, // You may want to replace hardcoded `32`
-              isActive: true
-            }
-          });
+//         return res.status(200).json({
+//           message: "Request approved and email sent",
+//           linkId: link.id
+//         });
 
-          await tx.request.update({
-            where: { id: requestId },
-            data: { status: "ACTIVE" }
-          });
+//       } catch (txnError) {
+//         console.error("Transaction error (approve):", txnError);
+//         return res.status(500).json({ message: "Failed to approve request. No changes made." });
+//       }
+//     }
 
-          await tx.user.update({
-            where: { id: request.user.id },
-            data: { role: "ADMIN" }
-          });
-
-          return [createdLink];
-        });
-
-        await sendHospitalCreationMail({
-          email: request.user.email,
-          linkId: link.id,
-          frontendUrl
-        });
-
-        return res.status(200).json({
-          message: "Request approved and email sent",
-          linkId: link.id
-        });
-
-      } catch (txnError) {
-        console.error("Transaction error (approve):", txnError);
-        return res.status(500).json({ message: "Failed to approve request. No changes made." });
-      }
-    }
-
-    else if (action === 'reject') {
-      try {
-        await prisma.request.update({
-          where: { id: requestId },
-          data: { status: 'INACTIVE' }
-        });
+//     else if (action === 'reject') {
+//       try {
+//         await prisma.request.update({
+//           where: { id: requestId },
+//           data: { status: 'INACTIVE' }
+//         });
 
 
-        return res.status(200).json({
-          message: "Request rejected successfully"
-        });
+//         return res.status(200).json({
+//           message: "Request rejected successfully"
+//         });
 
-      } catch (rejError) {
-        console.error("Rejection error:", rejError);
-        return res.status(500).json({ message: "Failed to reject request" });
-      }
-    }
+//       } catch (rejError) {
+//         console.error("Rejection error:", rejError);
+//         return res.status(500).json({ message: "Failed to reject request" });
+//       }
+//     }
 
-    return res.status(400).json({ message: "Invalid action" });
+//     return res.status(400).json({ message: "Invalid action" });
 
-  } catch (error) {
-    console.error("Request handler error:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-}));
+//   } catch (error) {
+//     console.error("Request handler error:", error);
+//     return res.status(500).json({ message: "Internal server error" });
+//   }
+// }));
 
 
 
@@ -321,7 +296,7 @@ router.put('/profile', authenticateToken, asyncHandler(async (req: Request, res:
       if ('address' in req.body) updateData.address = address;
 
       await prisma.user.upsert({
-        where: { id:userId },
+        where: { id: userId },
         update: updateData,
         create: {
           userId,
@@ -447,48 +422,49 @@ router.post('/reset-password', authenticateToken, asyncHandler(async (req: Reque
   }
 }));
 
-router.get("/admin-verify-code/:code",asyncHandler(async (req:Request,res:Response)=>{
-  const {code}=req.params
-  try{
-    const link=await prisma.link.findUnique({
-      where:{
-        id:code
+router.get("/admin-verify-code/:code", asyncHandler(async (req: Request, res: Response) => {
+  const { code } = req.params
+  try {
+    const link = await prisma.link.findUnique({
+      where: {
+        id: code
       }
-    }) 
-    if(!link)return res.status(401).json({message:"No link found against the code"})
-    const validLink=link.isActive
-  if(!validLink)return res.status(403).json({message:"Link is expired or used before"})
-    return res.status(201).json({message:"Link Verified"})
+    })
+    if (!link) return res.status(401).json({ message: "No link found against the code" })
+    const validLink = link.isActive
+    if (!validLink) return res.status(403).json({ message: "Link is expired or used before" })
+    return res.status(201).json({ message: "Link Verified" })
   }
-  catch(err){
-return res.status(500).json({message:"Internal Server Error"})
+  catch (err) {
+    return res.status(500).json({ message: "Internal Server Error" })
   }
 }))
 
-router.get("/admin-request-create",asyncHandler(authenticateToken),asyncHandler(async(req:Request,res:Response)=>{
-  const id=(req as any).user.id
-  try{const user=await prisma.user.findUnique({
-    where:{id}
-  })
-  if(!user)return res.status(404).json({message:"User not found"})
-    const createdRequest=await prisma.request.create({
-  data:{
-    userEmail:user.email,
-    user:{
-      connect:{
-        id:" "  // we have to give super-admin connection id here  
-      }
-    },
-    expiryTime:new Date(Date.now()+(7 * 24 * 60 * 60 * 1000))
-  }
-  })
-  return res.status(201).json({message:"Request Succesfully Created",request:createdRequest})
-  }
-catch(err){
-return res.status(500).json({message:"Internal Server Error"})
-}
+// router.get("/admin-request-create", asyncHandler(authenticateToken), asyncHandler(async (req: Request, res: Response) => {
+//   const id = (req as any).user.id
+//   try {
+//     const user = await prisma.user.findUnique({
+//       where: { id }
+//     })
+//     if (!user) return res.status(404).json({ message: "User not found" })
+//     const createdRequest = await prisma.request.create({
+//       data: {
+//         userEmail: user.email,
+//         user: {
+//           connect: {
+//             id: " "  // we have to give super-admin connection id here  
+//           }
+//         },
+//         expiryTime: new Date(Date.now() + (7 * 24 * 60 * 60 * 1000))
+//       }
+//     })
+//     return res.status(201).json({ message: "Request Succesfully Created", request: createdRequest })
+//   }
+//   catch (err) {
+//     return res.status(500).json({ message: "Internal Server Error" })
+//   }
 
-}))
+// }))
 
 //* verified
 router.get("/admin-route", authenticateToken, asyncHandler(async (req: Request, res: Response) => {
@@ -597,7 +573,7 @@ router.post('/google', asyncHandler(async (req: Request, res: Response) => {
           password: '',
           role: 'NORMAL',
           verified: true,
-          picture:picture
+          picture: picture
         }
       });
     }

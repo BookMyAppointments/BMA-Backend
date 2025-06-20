@@ -10,7 +10,7 @@ export const isDoctor = asyncHandler(async (req: Request, res: Response, next) =
         select: { role: true }
     });
 
-    if (!user || user.role !== 'DOCTOR') {
+    if (!user || user.role !== 'ADMIN') {
         return res.status(403).json({ message: "Access denied. Doctor role required." });
     }
     next();

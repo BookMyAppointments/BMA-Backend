@@ -14,10 +14,10 @@ const router = Router();
 router.post('/create/:hospitalId/:userId', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
   try {
     const { hospitalId, userId } = req.params;
-    const { specialization, qualifications, price, about }: Doctor = req.body;
+    const { specialization, qualifications, price, about, email, name, }: Doctor = req.body;
 
     const existingDoctor = await prisma.doctor.findUnique({
-      where: { id:userId }
+      where: { id: userId }
     });
 
     if (existingDoctor) {
@@ -43,29 +43,9 @@ router.post('/create/:hospitalId/:userId', authenticateToken, isAdmin, asyncHand
         price,
         about: about || "",
         ratings: 0,
-        
+        name,
+        email
       },
-    });
-
-    const existingAffiliation = await prisma.doctorHospital.findFirst({
-      where: {
-        doctorId: doctor.id,
-        hospitalId
-      }
-    });
-
-    if (existingAffiliation) {
-      return res.status(400).json({ message: "Affiliation already exists!!" });
-    }
-
-    const affiliation = await prisma.doctorHospital.create({
-      data: {
-        doctorId: doctor.id,
-        hospitalId
-      },
-      include: {
-        hospital: true
-      }
     });
 
     res.status(201).json({
@@ -86,7 +66,7 @@ router.get('/profile', authenticateToken, isDoctor, asyncHandler(async (req: Req
     const userId = (req as any).user.id;
 
     const doctor = await prisma.doctor.findUnique({
-      where: { id:userId },
+      where: { id: userId },
       include: {
         reviews: {
           include: {
@@ -148,11 +128,11 @@ router.put('/profile', authenticateToken, isDoctor, asyncHandler(async (req: Req
     const { specialization, qualifications, ratings, price, about }: Doctor = req.body;
 
     const doctor = await prisma.doctor.findUnique({
-      where: { id:userId }
+      where: { id: userId }
     });
 
     const updatedDoctor = await prisma.doctor.update({
-      where: { id:userId },
+      where: { id: userId },
       data: {
         specialization: specialization || doctor?.specialization,
         qualifications: qualifications || doctor?.qualifications,
@@ -181,7 +161,7 @@ router.post('/availability', authenticateToken, isDoctor, asyncHandler(async (re
     const { day, startTime, endTime } = req.body;
 
     const doctor = await prisma.doctor.findUnique({
-      where: { id:userId },
+      where: { id: userId },
       select: { id: true }
     });
 
@@ -239,7 +219,7 @@ router.get('/availability', authenticateToken, isDoctor, asyncHandler(async (req
     const userId = (req as any).user.id;
 
     const doctor = await prisma.doctor.findUnique({
-      where: { id:userId },
+      where: { id: userId },
       select: { id: true }
     });
 
@@ -265,7 +245,7 @@ router.delete('/availability/:id', authenticateToken, isDoctor, asyncHandler(asy
     const { id } = req.params;
 
     const doctor = await prisma.doctor.findUnique({
-      where: { id:userId },
+      where: { id: userId },
       select: { id: true }
     });
 
@@ -344,7 +324,7 @@ router.get('/reviews', authenticateToken, asyncHandler(async (req: Request, res:
     const userId = (req as any).user.id;
 
     const doctor = await prisma.doctor.findUnique({
-      where: { id:userId },
+      where: { id: userId },
       select: { id: true }
     });
 
@@ -380,7 +360,7 @@ router.get('/appointments', authenticateToken, isDoctor, asyncHandler(async (req
     const userId = (req as any).user.id;
 
     const doctor = await prisma.doctor.findUnique({
-      where: { id:userId },
+      where: { id: userId },
       select: { id: true }
     });
 
