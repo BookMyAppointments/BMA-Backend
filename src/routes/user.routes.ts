@@ -587,6 +587,7 @@ router.post('/google', asyncHandler(async (req: Request, res: Response) => {
           email: email!,
           name: name!,
           password: '',
+          gender: 'OTHER',
           role: 'NORMAL',
           verified: true,
           picture: picture

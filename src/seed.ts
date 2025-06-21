@@ -396,7 +396,7 @@ async function main() {
         name: 'John Doe',
         phone: '+91-8765432109',
         verified: true,
-        gender: 'Male',
+        gender: 'MALE',
         dob: new Date('1990-05-15'),
         address: 'A-123, Sector 7, Malviya Nagar, Jaipur',
         role: Role.NORMAL,
@@ -410,7 +410,7 @@ async function main() {
         name: 'Jane Smith',
         phone: '+91-8765432108',
         verified: true,
-        gender: 'Female',
+        gender: 'FEMALE',
         dob: new Date('1985-08-22'),
         address: 'B-456, Civil Lines, Jaipur',
         role: Role.NORMAL,
@@ -422,6 +422,7 @@ async function main() {
         email: 'admin@hospital.com',
         password: hashedPassword,
         name: 'Admin User',
+        gender: 'MALE',
         phone: '+91-8765432107',
         verified: true,
         role: Role.ADMIN,
@@ -621,14 +622,14 @@ async function main() {
     - ${medicalRecords.length} medical records
     - ${notifications.length} notifications
     - ${testResults.length} test results
-}`);
-
-  main()
-    .catch((e) => {
-      console.error('Error seeding database:', e);
-      process.exit(1);
-    })
-    .finally(async () => {
-      await prisma.$disconnect();
-    });
+}`)
 }
+
+main()
+  .catch((e) => {
+    console.error('Error seeding database:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

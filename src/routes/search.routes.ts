@@ -40,7 +40,6 @@ router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
             }
         });
         
-
         res.status(200).json(doctors);
     } catch (error) {
         console.error("Error searching doctors:", error);

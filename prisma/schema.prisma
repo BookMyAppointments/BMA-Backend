@@ -15,7 +15,7 @@ model User {
   phone         String?
   verifyCode    String?
   verified      Boolean         @default(false)
-  gender        Gender
+  gender        Gender?
   dob           DateTime?
   address       String?
   picture       String?

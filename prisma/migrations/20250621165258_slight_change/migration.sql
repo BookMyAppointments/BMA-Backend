@@ -1,0 +1,277 @@
+-- CreateEnum
+CREATE TYPE "AppointmentStatus" AS ENUM ('PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'RESCHEDULED');
+
+-- CreateEnum
+CREATE TYPE "Gender" AS ENUM ('MALE', 'FEMALE', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "Role" AS ENUM ('NORMAL', 'ADMIN', 'SUPERADMIN');
+
+-- CreateEnum
+CREATE TYPE "Status" AS ENUM ('ACTIVE', 'INACTIVE', 'PENDING', 'SUSPENDED', 'DELETED');
+
+-- CreateTable
+CREATE TABLE "User" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "phone" TEXT,
+    "verifyCode" TEXT,
+    "verified" BOOLEAN NOT NULL DEFAULT false,
+    "gender" "Gender",
+    "dob" TIMESTAMP(3),
+    "address" TEXT,
+    "picture" TEXT,
+    "locationId" TEXT,
+    "role" "Role" NOT NULL DEFAULT 'NORMAL',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Doctor" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "phone" TEXT,
+    "picture" TEXT,
+    "specialization" TEXT[],
+    "qualifications" TEXT[],
+    "ratings" DOUBLE PRECISION,
+    "about" TEXT,
+    "price" DOUBLE PRECISION NOT NULL,
+    "noOfPatients" INTEGER NOT NULL DEFAULT 0,
+    "hospitalId" TEXT,
+
+    CONSTRAINT "Doctor_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Hospital" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "picture" TEXT,
+    "description" TEXT,
+    "banner" TEXT,
+    "address" TEXT,
+    "departments" TEXT[],
+    "facilities" TEXT[],
+    "services" TEXT[],
+    "hours" JSONB NOT NULL,
+    "noOfPatients" INTEGER NOT NULL DEFAULT 0,
+    "status" "Status" NOT NULL DEFAULT 'ACTIVE',
+    "locationId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Hospital_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Review" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT,
+    "rating" INTEGER NOT NULL,
+    "comment" TEXT,
+    "doctorId" TEXT,
+    "hospitalId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Review_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Link" (
+    "id" TEXT NOT NULL,
+    "url" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Link_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Availability" (
+    "id" TEXT NOT NULL,
+    "doctorId" TEXT NOT NULL,
+    "day" TEXT NOT NULL,
+    "startTime" TEXT NOT NULL,
+    "endTime" TEXT NOT NULL,
+    "labId" TEXT,
+
+    CONSTRAINT "Availability_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Lab" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "picture" TEXT,
+    "description" TEXT,
+    "banner" TEXT,
+    "address" TEXT,
+    "services" TEXT[],
+    "hours" JSONB,
+    "noOfPatients" INTEGER NOT NULL DEFAULT 0,
+    "locationId" TEXT NOT NULL,
+    "hospitalId" TEXT,
+    "status" "Status" NOT NULL DEFAULT 'ACTIVE',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Lab_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Location" (
+    "id" TEXT NOT NULL,
+    "lat" DOUBLE PRECISION NOT NULL,
+    "lng" DOUBLE PRECISION NOT NULL,
+    "address" TEXT NOT NULL,
+
+    CONSTRAINT "Location_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Appointment" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "doctorId" TEXT,
+    "labId" TEXT,
+    "testId" TEXT,
+    "status" "AppointmentStatus" NOT NULL,
+    "scheduledAt" TIMESTAMP(3) NOT NULL,
+    "rescheduledAt" TIMESTAMP(3),
+    "cancelledAt" TIMESTAMP(3),
+
+    CONSTRAINT "Appointment_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "MedicalTest" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "category" TEXT NOT NULL,
+    "price" DOUBLE PRECISION NOT NULL,
+    "homeSample" BOOLEAN NOT NULL,
+    "labId" TEXT NOT NULL,
+
+    CONSTRAINT "MedicalTest_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TestResult" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "testId" TEXT NOT NULL,
+    "result" TEXT NOT NULL,
+    "issuedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "TestResult_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Notification" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "type" "AppointmentStatus" NOT NULL,
+    "message" TEXT NOT NULL,
+    "read" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "MedicalRecord" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "history" TEXT[],
+    "documents" TEXT[],
+
+    CONSTRAINT "MedicalRecord_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Request" (
+    "id" TEXT NOT NULL,
+    "userEmail" TEXT NOT NULL,
+    "expiryTime" TIMESTAMP(3) NOT NULL,
+    "userId" TEXT NOT NULL,
+    "status" "Status" NOT NULL DEFAULT 'PENDING',
+
+    CONSTRAINT "Request_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "MedicalRecord_userId_key" ON "MedicalRecord"("userId");
+
+-- CreateIndex
+CREATE INDEX "MedicalRecord_userId_idx" ON "MedicalRecord"("userId");
+
+-- AddForeignKey
+ALTER TABLE "User" ADD CONSTRAINT "User_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "Location"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Doctor" ADD CONSTRAINT "Doctor_hospitalId_fkey" FOREIGN KEY ("hospitalId") REFERENCES "Hospital"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Hospital" ADD CONSTRAINT "Hospital_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "Location"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Review" ADD CONSTRAINT "Review_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Review" ADD CONSTRAINT "Review_doctorId_fkey" FOREIGN KEY ("doctorId") REFERENCES "Doctor"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Review" ADD CONSTRAINT "Review_hospitalId_fkey" FOREIGN KEY ("hospitalId") REFERENCES "Hospital"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Availability" ADD CONSTRAINT "Availability_doctorId_fkey" FOREIGN KEY ("doctorId") REFERENCES "Doctor"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Availability" ADD CONSTRAINT "Availability_labId_fkey" FOREIGN KEY ("labId") REFERENCES "Lab"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Lab" ADD CONSTRAINT "Lab_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "Location"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Lab" ADD CONSTRAINT "Lab_hospitalId_fkey" FOREIGN KEY ("hospitalId") REFERENCES "Hospital"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_doctorId_fkey" FOREIGN KEY ("doctorId") REFERENCES "Doctor"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_labId_fkey" FOREIGN KEY ("labId") REFERENCES "Lab"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_testId_fkey" FOREIGN KEY ("testId") REFERENCES "MedicalTest"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "MedicalTest" ADD CONSTRAINT "MedicalTest_labId_fkey" FOREIGN KEY ("labId") REFERENCES "Lab"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TestResult" ADD CONSTRAINT "TestResult_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TestResult" ADD CONSTRAINT "TestResult_testId_fkey" FOREIGN KEY ("testId") REFERENCES "MedicalTest"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "MedicalRecord" ADD CONSTRAINT "MedicalRecord_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Request" ADD CONSTRAINT "Request_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
