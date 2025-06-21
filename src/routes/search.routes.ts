@@ -12,21 +12,20 @@ const router = Router();
 //* Search doctors by name/specialization (verified**)
 router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
     try {
-        const { name, specialization, hospitalId, isEmergency } = req.query;
+        
+        const { name, specialization, hospitalId } = req.query;
 
         const where: any = {
-            doctor: {
-                user: {
-                    name: name ? { contains: name as string, mode: 'insensitive' } : undefined
-                },
-                specialization: specialization ? { has: specialization as string } : undefined
-            }
+            ...(name && {
+                name: { contains: name as string, mode: 'insensitive' }
+            }),
+            ...(specialization && {
+                specialization: { has: specialization as string }
+            }),
+            ...(hospitalId && {
+                hospitalId: hospitalId as string
+            })
         };
-
-        if (hospitalId) {
-            where.hospitalId = hospitalId as string;
-        }
-        if (isEmergency) where.isEmergency = true
 
         const doctors = await prisma.doctor.findMany({
             where,
@@ -36,14 +35,11 @@ router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
                 hospital: {
                     include: {
                         location: true
-                    },
-                    select: {
-                        id: true,
-                        name: true,
                     }
                 },
             }
         });
+        
 
         res.status(200).json(doctors);
     } catch (error) {
@@ -51,6 +47,7 @@ router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
         res.status(500).json({ message: "Internal server error" });
     }
 }));
+
 
 //* Search hospitals by name/location/etc... (verified**)
 router.get('/hospitals', asyncHandler(async (req: Request, res: Response) => {

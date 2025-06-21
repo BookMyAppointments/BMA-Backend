@@ -121,6 +121,7 @@ router.post('/signin', asyncHandler(async (req: Request, res: Response) => {
     const user = await prisma.user.findUnique({
       where: { email }
     });
+console.log();
 
     if (!user) {
       return res.status(401).json({ message: "User does not exist!!" });
@@ -310,6 +311,28 @@ router.put('/profile', authenticateToken, asyncHandler(async (req: Request, res:
     });
   } catch (error) {
     console.error("Update profile error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}));
+router.get('/profile', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    console.log("User id:", userId);
+
+    const user = await prisma.user.findFirst({
+      where: { id: userId },
+      include:{
+        requests:true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json(user);
+  } catch (error) {
+    console.error("Profile error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 }));
