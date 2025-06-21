@@ -45,6 +45,7 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
                 currentTime: now.toISOString()
             });
         }
+console.log("running as fine ");
 
         // Check for user's existing appointments
         const existingAppointment = await prisma.appointment.findFirst({
@@ -303,7 +304,7 @@ router.patch('/confirm/:id', authenticateToken, asyncHandler(async (req: Request
 }));
 
 //* Reschedule an appointment (verified**)
-router.patch('/reschedule/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+router.put('/reschedule/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const userId = (req as any).user.id;
@@ -483,7 +484,7 @@ doctorAvailable=true
 }));
 
 //* Cancel an appointment (verified**)
-router.patch('/cancel/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+router.put('/cancel/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const userId = (req as any).user.id;

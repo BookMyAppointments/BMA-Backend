@@ -237,14 +237,7 @@ router.get('/appointments', authenticateToken, asyncHandler(async (req: Request,
                         name: true
                     }
                 },
-                doctor: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        noOfPatients: true,
-                    }
-                },
+                doctor: true,
                 lab: {
                     include: {
                         hospital: true,
