@@ -32,9 +32,7 @@ router.post('/create/:hospitalId', authenticateToken, isAdmin, asyncHandler(asyn
             lng: location.lng,
             address: location.address
         }
-    });
-
-    // Create lab with location
+    });    // Create lab with location
     const lab = await prisma.lab.create({
         data: {
             name,
@@ -48,7 +46,13 @@ router.post('/create/:hospitalId', authenticateToken, isAdmin, asyncHandler(asyn
         },
         include: {
             location: true,
-            hospital: true
+            hospital: {
+                include: {
+                    location: true
+                }
+            },
+            tests: true,
+            availability: true
         }
     });
 
@@ -71,13 +75,17 @@ router.get('/get/:hospitalId', asyncHandler(async (req: Request, res: Response) 
         where.services = {
             has: service as string
         };
-    }
-
-    const labs = await prisma.lab.findMany({
+    }    const labs = await prisma.lab.findMany({
         where,
         include: {
             location: true,
-            hospital: true
+            hospital: {
+                include: {
+                    location: true
+                }
+            },
+            tests: true,
+            availability: true
         }
     });
 
@@ -100,7 +108,13 @@ router.get('/all', asyncHandler(async (req: Request, res: Response) => {
         where,
         include: {
             location: true,
-            hospital: true
+            hospital: {
+                include: {
+                    location: true
+                }
+            },
+            tests: true,
+            availability: true
         }
     });
 
@@ -115,7 +129,13 @@ router.get('/find/:id', asyncHandler(async (req: Request, res: Response) => {
         where: { id },
         include: {
             location: true,
-            hospital: true
+            hospital: {
+                include: {
+                    location: true
+                }
+            },
+            tests: true,
+            availability: true
         }
     });
 
@@ -155,9 +175,7 @@ router.put('/update/:id', authenticateToken, isAdmin, asyncHandler(async (req: R
                 address: location.address
             }
         });
-    }
-
-    // Update lab
+    }    // Update lab
     const updatedLab = await prisma.lab.update({
         where: { id },
         data: {
@@ -166,7 +184,13 @@ router.put('/update/:id', authenticateToken, isAdmin, asyncHandler(async (req: R
         },
         include: {
             location: true,
-            hospital: true
+            hospital: {
+                include: {
+                    location: true
+                }
+            },
+            tests: true,
+            availability: true
         }
     });
 

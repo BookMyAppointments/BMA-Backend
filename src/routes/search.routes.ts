@@ -15,18 +15,14 @@ router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
         const { name, specialization, hospitalId, isEmergency } = req.query;
 
         const where: any = {
-            doctor: {
-                user: {
-                    name: name ? { contains: name as string, mode: 'insensitive' } : undefined
-                },
-                specialization: specialization ? { has: specialization as string } : undefined
-            }
+            name: name ? { contains: name as string, mode: 'insensitive' } : undefined,
+            specialization: specialization ? { has: specialization as string } : undefined
         };
 
         if (hospitalId) {
             where.hospitalId = hospitalId as string;
         }
-        if (isEmergency) where.isEmergency = true
+        // if (isEmergency) where.isEmergency = true
 
         const doctors = await prisma.doctor.findMany({
             where,
@@ -35,11 +31,7 @@ router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
                 reviews: true,
                 hospital: {
                     include: {
-                        location: true
-                    },
-                    select: {
-                        id: true,
-                        name: true,
+                        location: true,
                     }
                 },
             }
