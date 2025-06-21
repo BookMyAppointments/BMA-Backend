@@ -25,7 +25,7 @@ model User {
   appointments  Appointment[]
   testResults   TestResult[]
   notifications Notification[]
-  requests Request[]
+  requests      Request[]
   reviews       Review[]
   location      Location?       @relation(fields: [locationId], references: [id])
   createdAt     DateTime        @default(now())
@@ -37,6 +37,7 @@ model Doctor {
   email          String
   name           String
   phone          String?
+  picture        String?
   specialization String[]
   qualifications String[]
   ratings        Float?
@@ -201,15 +202,15 @@ model MedicalRecord {
 
   @@index([userId])
 }
-model Request{
-  id String @id @default(uuid())
-  userEmail String 
-  expiryTime DateTime 
-  userId String
-  status Status @default(PENDING)
-  user User @relation(fields: [userId], references: [id])
-}
 
+model Request {
+  id         String   @id @default(uuid())
+  userEmail  String
+  expiryTime DateTime
+  userId     String
+  status     Status   @default(PENDING)
+  user       User     @relation(fields: [userId], references: [id])
+}
 
 enum Role {
   NORMAL
