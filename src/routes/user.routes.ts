@@ -273,41 +273,34 @@ router.put('/profile', authenticateToken, asyncHandler(async (req: Request, res:
     const userId = (req as any).user.id;
     const { name, phone, dob, gender, address } = req.body;
 
-    console.log("User id:", userId);
-
     if (!name && !phone && !dob && !gender && !address) {
       return res.status(400).json({ message: "At least one field is required for update" });
     }
 
-    if (Object.keys(req.body).some(key => ['name', 'phone'].includes(key))) {
-      const updateData: any = {};
-      if ('name' in req.body) updateData.name = name;
-      if ('phone' in req.body) updateData.phone = phone;
+    const updateData: any = {};
+    if (name) updateData.name = name;
+    if (phone) updateData.phone = phone;
+    if (dob) updateData.dob = new Date(dob);
+    if (gender) updateData.gender = gender;
+    if (address) updateData.address = address;
 
-      await prisma.user.update({
-        where: { id: userId },
-        data: updateData
-      });
-    }
-
-    if (Object.keys(req.body).some(key => ['dob', 'gender', 'address'].includes(key))) {
-      const updateData: any = {};
-      if ('dob' in req.body) updateData.dob = new Date(dob);
-      if ('gender' in req.body) updateData.gender = gender;
-      if ('address' in req.body) updateData.address = address;
-
-      await prisma.user.upsert({
-        where: { id: userId },
-        update: updateData,
-        create: {
-          userId,
-          ...updateData
-        }
-      });
-    }
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        dob: true,
+        gender: true,
+        address: true,
+        email: true
+      }
+    });
 
     return res.status(200).json({
       message: "Profile updated successfully",
+      user: updatedUser
     });
   } catch (error) {
     console.error("Update profile error:", error);
@@ -617,6 +610,33 @@ router.post('/google', asyncHandler(async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Google auth error:", error);
     return res.status(500).json({ message: "Internal server error" });
+  }
+}));
+
+router.post('/documents/create', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+
+    // Check if record already exists (unique constraint)
+    const existing = await prisma.medicalRecord.findUnique({
+      where: { userId }
+    });
+    if (existing) {
+      return res.status(400).json({ message: 'Medical record already exists.' });
+    }
+
+    const record = await prisma.medicalRecord.create({
+      data: {
+        userId,
+        history: [],
+        documents: []
+      }
+    });
+
+    return res.status(201).json({ message: 'Medical record created!', record });
+  } catch (error) {
+    console.error('Error creating medical record:', error);
+    return res.status(500).json({ message: 'Failed to create medical record' });
   }
 }));
 

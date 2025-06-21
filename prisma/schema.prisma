@@ -15,7 +15,7 @@ model User {
   phone         String?
   verifyCode    String?
   verified      Boolean         @default(false)
-  gender        String?
+  gender        Gender
   dob           DateTime?
   address       String?
   picture       String?
@@ -160,7 +160,11 @@ enum AppointmentStatus {
   CANCELLED
   RESCHEDULED
 }
-
+enum Gender{
+  MALE
+  FEMALE
+  OTHER
+}
 model MedicalTest {
   id           String        @id @default(uuid())
   name         String
