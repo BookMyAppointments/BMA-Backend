@@ -131,9 +131,7 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
             if (!labAvailable) {
                 return res.status(400).json({ message: "Lab is not available at this time" });
             }
-        }
-
-        // Create appointment
+        }        // Create appointment
         const appointment = await prisma.appointment.create({
             data: {
                 userId,
@@ -145,13 +143,38 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
             },
             include: {
                 user: true,
-                doctor: true,
-                lab: true,
+                doctor: {
+                    include: {
+                        hospital: {
+                            include: {
+                                location: true
+                            }
+                        }
+                    }
+                },
+                lab: {
+                    include: {
+                        hospital: {
+                            include: {
+                                location: true
+                            }
+                        },
+                        location: true
+                    }
+                },
                 test: true
             }
         });
 
-        // Send notifications
+        // Transform appointment to include computed fields for frontend compatibility
+        const transformedAppointment = {
+            ...appointment,
+            appointmentDate: appointment.scheduledAt,
+            startTime: appointment.scheduledAt.toTimeString().slice(0, 5),
+            endTime: new Date(appointment.scheduledAt.getTime() + 60 * 60 * 1000).toTimeString().slice(0, 5), // 1 hour later
+            hospitalId: appointment.doctor?.hospitalId || appointment.lab?.hospitalId,
+            hospital: appointment.doctor?.hospital || appointment.lab?.hospital
+        };        // Send notifications
         try {
             if (doctorId && appointment.doctor?.id) {
                 await sendNotification({
@@ -167,10 +190,29 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
                     data: { status: 'CONFIRMED' },
                     include: {
                         user: true,
-                        lab: true,
+                        lab: {
+                            include: {
+                                hospital: {
+                                    include: {
+                                        location: true
+                                    }
+                                },
+                                location: true
+                            }
+                        },
                         test: true
                     }
                 });
+
+                // Transform confirmed appointment
+                const transformedConfirmedAppointment = {
+                    ...confirmedAppointment,
+                    appointmentDate: confirmedAppointment.scheduledAt,
+                    startTime: confirmedAppointment.scheduledAt.toTimeString().slice(0, 5),
+                    endTime: new Date(confirmedAppointment.scheduledAt.getTime() + 60 * 60 * 1000).toTimeString().slice(0, 5),
+                    hospitalId: confirmedAppointment.lab?.hospitalId,
+                    hospital: confirmedAppointment.lab?.hospital
+                };
 
                 // await sendNotification({
                 //     userId,
@@ -179,22 +221,26 @@ router.post('/create', authenticateToken, asyncHandler(async (req: Request, res:
                 //     type: 'CONFIRMED'
                 // });
 
-                return res.status(201).json(confirmedAppointment);
+                return res.status(201).json(transformedConfirmedAppointment);
             }
         } catch (notificationError) {
             console.error('Failed to send notification:', notificationError);
         }
-        await prisma.doctor.update({
-            where:{
-                id:doctorId
-            },
-            data:{
-                noOfPatients:{
-                    increment:1
+        
+        if (doctorId) {
+            await prisma.doctor.update({
+                where: {
+                    id: doctorId
+                },
+                data: {
+                    noOfPatients: {
+                        increment: 1
+                    }
                 }
-            }
-        })
-        res.status(201).json(appointment);
+            });
+        }
+        
+        res.status(201).json(transformedAppointment);
     } catch (error) {
         console.error('Error creating appointment:', error);
         res.status(500).json({ message: "An error occurred while creating the appointment" });
@@ -576,9 +622,7 @@ router.patch('/complete/:id', authenticateToken, asyncHandler(async (req: Reques
 router.get('/get/:id', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const userId = (req as any).user.id;
-
-        const appointment = await prisma.appointment.findUnique({
+        const userId = (req as any).user.id;        const appointment = await prisma.appointment.findUnique({
             where: { id },
             include: {
                 user: {
@@ -587,14 +631,24 @@ router.get('/get/:id', authenticateToken, asyncHandler(async (req: Request, res:
                         name: true,
                         email: true,
                     }
-                },                doctor: {
+                },
+                doctor: {
                     include: {
-                        reviews: true
+                        reviews: true,
+                        hospital: {
+                            include: {
+                                location: true
+                            }
+                        }
                     }
                 },
                 lab: {
                     include: {
-                        hospital: true,
+                        hospital: {
+                            include: {
+                                location: true
+                            }
+                        },
                         location: true,
                         availability: true
                     }
@@ -611,7 +665,17 @@ router.get('/get/:id', authenticateToken, asyncHandler(async (req: Request, res:
             return res.status(403).json({ message: "You can only view your own appointments" });
         }
 
-        res.status(200).json(appointment);
+        // Transform appointment to include computed fields for frontend compatibility
+        const transformedAppointment = {
+            ...appointment,
+            appointmentDate: appointment.scheduledAt,
+            startTime: appointment.scheduledAt.toTimeString().slice(0, 5),
+            endTime: new Date(appointment.scheduledAt.getTime() + 60 * 60 * 1000).toTimeString().slice(0, 5), // 1 hour later
+            hospitalId: appointment.doctor?.hospitalId || appointment.lab?.hospitalId,
+            hospital: appointment.doctor?.hospital || appointment.lab?.hospital
+        };
+
+        res.status(200).json(transformedAppointment);
     } catch (error) {
         console.error('Error fetching appointment:', error);
         res.status(500).json({ message: "An error occurred while fetching the appointment" });
@@ -767,6 +831,150 @@ router.get('/labs/availability/:id', asyncHandler(async (req: Request, res: Resp
     } catch (error) {
         console.error('Error fetching lab availability:', error);
         res.status(500).json({ message: "An error occurred while fetching lab availability" });
+    }
+}));
+
+//* Get user's appointments (verified**)
+router.get('/user/all', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user.id;
+        const { status, page = 1, limit = 10 } = req.query;
+
+        const skip = (Number(page) - 1) * Number(limit);
+
+        const whereClause: any = { userId };
+        if (status) {
+            whereClause.status = status;
+        }
+
+        const appointments = await prisma.appointment.findMany({
+            where: whereClause,
+            include: {
+                doctor: {
+                    include: {
+                        hospital: {
+                            include: {
+                                location: true
+                            }
+                        }
+                    }
+                },
+                lab: {
+                    include: {
+                        hospital: {
+                            include: {
+                                location: true
+                            }
+                        },
+                        location: true
+                    }
+                },
+                test: true
+            },
+            orderBy: {
+                scheduledAt: 'desc'
+            },
+            skip: skip,
+            take: Number(limit)
+        });
+
+        // Transform appointments to include computed fields for frontend compatibility
+        const transformedAppointments = appointments.map(appointment => ({
+            ...appointment,
+            appointmentDate: appointment.scheduledAt,
+            startTime: appointment.scheduledAt.toTimeString().slice(0, 5),
+            endTime: new Date(appointment.scheduledAt.getTime() + 60 * 60 * 1000).toTimeString().slice(0, 5), // 1 hour later
+            hospitalId: appointment.doctor?.hospitalId || appointment.lab?.hospitalId,
+            hospital: appointment.doctor?.hospital || appointment.lab?.hospital
+        }));
+
+        const total = await prisma.appointment.count({
+            where: whereClause
+        });
+
+        res.status(200).json({
+            appointments: transformedAppointments,
+            pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                total,
+                pages: Math.ceil(total / Number(limit))
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching user appointments:', error);
+        res.status(500).json({ message: "An error occurred while fetching appointments" });
+    }
+}));
+
+//* Get doctor's appointments (verified**)
+router.get('/doctor/all', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const doctorId = (req as any).user.id;
+        const { status, page = 1, limit = 10 } = req.query;
+
+        const skip = (Number(page) - 1) * Number(limit);
+
+        const whereClause: any = { doctorId };
+        if (status) {
+            whereClause.status = status;
+        }
+
+        const appointments = await prisma.appointment.findMany({
+            where: whereClause,
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        phone: true,
+                        picture: true
+                    }
+                },
+                doctor: {
+                    include: {
+                        hospital: {
+                            include: {
+                                location: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: {
+                scheduledAt: 'desc'
+            },
+            skip: skip,
+            take: Number(limit)
+        });
+
+        // Transform appointments to include computed fields for frontend compatibility
+        const transformedAppointments = appointments.map(appointment => ({
+            ...appointment,
+            appointmentDate: appointment.scheduledAt,
+            startTime: appointment.scheduledAt.toTimeString().slice(0, 5),
+            endTime: new Date(appointment.scheduledAt.getTime() + 60 * 60 * 1000).toTimeString().slice(0, 5), // 1 hour later
+            hospitalId: appointment.doctor?.hospitalId,
+            hospital: appointment.doctor?.hospital
+        }));
+
+        const total = await prisma.appointment.count({
+            where: whereClause
+        });
+
+        res.status(200).json({
+            appointments: transformedAppointments,
+            pagination: {
+                page: Number(page),
+                limit: Number(limit),
+                total,
+                pages: Math.ceil(total / Number(limit))
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching doctor appointments:', error);
+        res.status(500).json({ message: "An error occurred while fetching appointments" });
     }
 }));
 
