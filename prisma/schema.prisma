@@ -27,6 +27,7 @@ model User {
   notifications Notification[]
   requests      Request[]
   reviews       Review[]
+  hospitals     Hospital[]
   location      Location?       @relation(fields: [locationId], references: [id])
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
@@ -63,6 +64,8 @@ model Hospital {
   services     String[]
   hours        Json
   noOfPatients Int      @default(0)
+  adminId      String?
+  admin        User?    @relation(fields: [adminId], references: [id], onDelete: Cascade)
   reviews      Review[]
   doctors      Doctor[]
   labs         Lab[]
@@ -89,7 +92,7 @@ model Review {
 
 model Link {
   id        String   @id @default(uuid())
-  url       String
+  url       String   @unique
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

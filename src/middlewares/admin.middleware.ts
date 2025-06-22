@@ -16,3 +16,17 @@ export const isAdmin = asyncHandler(async (req: Request, res: Response, next) =>
     }
     next();
 });
+
+export const isSuperAdmin = asyncHandler(async (req: Request, res: Response, next) => {
+    const userId = (req as any).user.id;
+
+    const user = await prisma.user.findFirst({
+        where: { id: userId },
+        select: { role: true }
+    });
+
+    if (!user || user.role !== 'SUPERADMIN') {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+    }
+    next();
+});
