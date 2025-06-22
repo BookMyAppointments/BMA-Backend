@@ -12,7 +12,6 @@ import { sendHospitalCreationMail } from '../emails/HospitalMail';
 const router = Router();
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-//* verified
 router.post('/signup', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, password, name, phone } = req.body;
@@ -68,7 +67,6 @@ router.post('/signup', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
-//* verified
 router.post('/verify', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, code } = req.body;
@@ -109,7 +107,6 @@ router.post('/verify', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
-//* verified
 router.post('/signin', asyncHandler(async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
@@ -151,97 +148,257 @@ router.post('/signin', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
-router.get('/requests/:requestId/:action', asyncHandler(authenticateToken), asyncHandler(async (req: Request, res: Response) => {
-  const { requestId, action } = req.params;
-  const adminId = (req as any).user.id;
-
+router.get('/profile', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
-    
-    // const admin = await prisma.user.findUnique({ where: { id: adminId } });
-    // if (!admin || admin.role !== 'SUPERADMIN') {
-    //   return res.status(403).json({ message: "Unauthorized: Admin access required" });
-    // }
+    const userId = (req as any).user.id;
+    console.log("User id:", userId);
 
-    const requests = await prisma.request.findMany()
-    console.log(requests);
-    
+    const user = await prisma.user.findFirst({
+      where: { id: userId },
+      include: {
+        requests: true
+      }
+    });
 
-    // if (!request) {
-    //   return res.status(404).json({ message: "Request not found" });
-    // }
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    // const frontendUrl = process.env.FRONTEND_URL;
-    // if (!frontendUrl) {
-    //   return res.status(500).json({ message: "FRONTEND_URL is not configured in environment" });
-    // }
-
-    // if (action === 'approve') {
-    //   try {
-    //     const [link] = await prisma.$transaction(async (tx) => {
-    //       const createdLink = await tx.link.create({
-    //         data: {
-    //           url: `${frontendUrl}/admin/hospital/create/32`, // You may want to replace hardcoded `32`
-    //           isActive: true
-    //         }
-    //       });
-
-    //       await tx.request.update({
-    //         where: { id: requestId },
-    //         data: { status: "ACTIVE" }
-    //       });
-
-    //       await tx.user.update({
-    //         where: { id: request.user.id },
-    //         data: { role: "ADMIN" }
-    //       });
-
-    //       return [createdLink];
-    //     });
-
-    //     await sendHospitalCreationMail({
-    //       email: request.user.email,
-    //       linkId: link.id,
-    //       frontendUrl
-    //     });
-
-    //     return res.status(200).json({
-    //       message: "Request approved and email sent",
-    //       linkId: link.id
-    //     });
-
-    //   } catch (txnError) {
-    //     console.error("Transaction error (approve):", txnError);
-    //     return res.status(500).json({ message: "Failed to approve request. No changes made." });
-    //   }
-    // }
-
-    // else if (action === 'reject') {
-    //   try {
-    //     await prisma.request.update({
-    //       where: { id: requestId },
-    //       data: { status: 'INACTIVE' }
-    //     });
-
-
-        return res.status(200).json({
-          message: "Request rejected successfully"
-        });
-
-    //   } catch (rejError) {
-    //     console.error("Rejection error:", rejError);
-    //     return res.status(500).json({ message: "Failed to reject request" });
-    //   }
-    // }
-
-    // return res.status(400).json({ message: "Invalid action" });
-
+    return res.status(200).json(user);
   } catch (error) {
-    console.error("Request handler error:", error);
+    console.error("Profile error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 }));
 
-//* verified
+router.put('/profile', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    const { name, phone, dob, gender, address } = req.body;
+
+    if (!name && !phone && !dob && !gender && !address) {
+      return res.status(400).json({ message: "At least one field is required for update" });
+    }
+
+    const updateData: any = {};
+    if (name) updateData.name = name;
+    if (phone) updateData.phone = phone;
+    if (dob) updateData.dob = new Date(dob);
+    if (gender) updateData.gender = gender.toUpperCase();
+    if (address) updateData.address = address;
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+    });
+
+    return res.status(200).json({
+      message: "Profile updated successfully",
+    });
+
+  } catch (error) {
+    console.error("Update profile error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}));
+
+router.post('/reset-password/request', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      return res.status(200).json({ message: "If the email exists, a reset code has been sent" });
+    }
+
+    const resetCode = generateVerificationCode();
+
+    await prisma.user.update({
+      where: { email },
+      data: {
+        verifyCode: resetCode,
+      }
+    });
+
+    const emailResult = await sendVerificationEmail(email, resetCode, 'reset');
+    console.log(emailResult);
+
+    if (!emailResult.success) {
+      return res.status(500).json({ message: "Failed to send reset code" });
+    }
+
+    return res.status(200).json({ message: "Reset code sent to your email" });
+  } catch (error) {
+    console.error("Password reset request error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}));
+
+router.post('/reset-password/verify', asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { email, code, password: newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ message: "Email, reset-code and password are required" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.verifyCode?.toLowerCase() !== String(code)) {
+      return res.status(400).json({ message: "Invalid Verification Code!!" });
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { email },
+      data: {
+        password: hashedPassword,
+      }
+    });
+
+    return res.status(201).json({ message: "Password Updated Succesfully" })
+  } catch (error) {
+    console.error("Reset code verification error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}));
+
+router.post('/reset-password', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { originalPassword, newPassword }: { originalPassword: string, newPassword: string } = req.body;
+    const id = (req as any).user.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const checkResult = await bcrypt.compare(originalPassword, user.password);
+
+    if (!checkResult) {
+      return res.status(400).json({ message: "Existing password not matched" });
+    }
+
+    await prisma.user.update({
+      where: {
+        id
+      },
+      data: {
+        password: await bcrypt.hash(newPassword, 10)
+      }
+    });
+
+    return res.status(200).json({ message: "Password reset successfully" });
+  } catch (error) {
+    console.error("Password reset error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}));
+
+router.post('/send-verification-code', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    const userId = (req as any).user.id;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!currentUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        email,
+        id: { not: userId }
+      }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ message: "Email is already in use" });
+    }
+
+    const verifyCode = generateVerificationCode();
+
+    // Update current user with new verification code
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        verifyCode,
+        verified: false,
+        email
+      }
+    });
+
+    const emailResult = await sendVerificationEmail(email, verifyCode, 'signup');
+    if (!emailResult.success) {
+      // Revert the user update since email sending failed
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          email: currentUser.email, // Use stored original email
+          verified: currentUser.verified, // Use stored original verification status
+          verifyCode: null
+        }
+      });
+      return res.status(500).json({ message: "Failed to send verification email. Please try again." });
+    }
+
+    res.status(200).json({ message: "Verification code sent successfully" });
+  } catch (error) {
+    console.error("Send verification code error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}));
+
+router.post('/documents/create', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+
+    // Check if record already exists (unique constraint)
+    const existing = await prisma.medicalRecord.findUnique({
+      where: { userId }
+    });
+    if (existing) {
+      return res.status(400).json({ message: 'Medical record already exists.' });
+    }
+
+    const record = await prisma.medicalRecord.create({
+      data: {
+        userId,
+        history: [],
+        documents: []
+      }
+    });
+
+    return res.status(201).json({ message: 'Medical record created!', record });
+  } catch (error) {
+    console.error('Error creating medical record:', error);
+    return res.status(500).json({ message: 'Failed to create medical record' });
+  }
+}));
+
 router.get('/documents', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
@@ -264,257 +421,6 @@ router.get('/documents', authenticateToken, asyncHandler(async (req: Request, re
     return res.status(500).json({ message: "Internal server error" });
   }
 }));
-
-//* verified
-router.put('/profile', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user.id;
-    const { name, phone, dob, gender, address } = req.body;
-
-    if (!name && !phone && !dob && !gender && !address) {
-      return res.status(400).json({ message: "At least one field is required for update" });
-    }
-
-    const updateData: any = {};
-    if (name) updateData.name = name;
-    if (phone) updateData.phone = phone;
-    if (dob) updateData.dob = new Date(dob);
-    if (gender) updateData.gender = gender.toUpperCase();
-    if (address) updateData.address = address;
-
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        dob: true,
-        gender: true,
-        address: true,
-        email: true
-      }
-    });
-
-    return res.status(200).json({
-      message: "Profile updated successfully",
-      user: updatedUser
-    });
-  } catch (error) {
-    console.error("Update profile error:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-}));
-
-router.get('/profile', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user.id;
-    console.log("User id:", userId);
-
-    const user = await prisma.user.findFirst({
-      where: { id: userId },
-      include: {
-        requests: true
-      }
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    
-    return res.status(200).json(user);
-  } catch (error) {
-    console.error("Profile error:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-}));
-
-//* verified
-router.post('/reset-password/request', asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ message: "Email is required" });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
-    if (!user) {
-      return res.status(200).json({ message: "If the email exists, a reset code has been sent" });
-    }
-    const resetCode = generateVerificationCode();
-    await prisma.user.update({
-      where: { email },
-      data: {
-        verifyCode: resetCode,
-      }
-    });
-
-    const emailResult = await sendVerificationEmail(email, resetCode, 'reset');
-    console.log(emailResult);
-
-    if (!emailResult.success) {
-      return res.status(500).json({ message: "Failed to send reset code" });
-    }
-
-    return res.status(200).json({ message: "Reset code sent to your email" });
-  } catch (error) {
-    console.error("Password reset request error:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-}));
-
-//* verified
-router.post('/reset-password/verify', asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const { email, code, password: newPassword } = req.body;
-
-    if (!email || !code || !newPassword) {
-      return res.status(400).json({ message: "Email, reset-code and password are required" });
-    }
-
-
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (user.verifyCode?.toLowerCase() !== String(code)) {
-      return res.status(400).json({ message: "Invalid Verification Code!!" });
-    }
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    const updatedUser = await prisma.user.update({
-      where: { email },
-      data: {
-        password: hashedPassword,
-      }
-    });
-    return res.status(201).json({ message: "Password Updated Succesfully" })
-  } catch (error) {
-    console.error("Reset code verification error:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-}));
-
-//* verified
-router.post('/reset-password', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const { originalPassword, newPassword }: { originalPassword: string, newPassword: string } = req.body;
-    const id = (req as any).user.id
-
-
-
-    const user = await prisma.user.findUnique({
-      where: { id }
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    const checkResult = await bcrypt.compare(originalPassword, user.password)
-    if (!checkResult) {
-      return res.status(400).json({ message: "Existing password not matched" });
-    }
-    await prisma.user.update({
-      where: {
-        id
-      },
-      data: {
-        password: await bcrypt.hash(newPassword, 10)
-      }
-    })
-
-    return res.status(200).json({ message: "Password reset successfully" });
-  } catch (error) {
-    console.error("Password reset error:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-}));
-
-router.get("/admin-verify-code/:code", asyncHandler(async (req: Request, res: Response) => {
-  const { code } = req.params
-  
-  try {
-    const link = await prisma.link.findUnique({
-      where: {
-        id: code
-      }
-    })
-    if (!link) return res.status(401).json({ message: "No link found against the code" })
-    const validLink = link.isActive
-    if (!validLink) return res.status(403).json({ message: "Link is expired or used before" })
-    return res.status(201).json({ message: "Link Verified" })
-  }
-  catch (err) {
-    return res.status(500).json({ message: "Internal Server Error" })
-  }
-}))
-
-router.post("/admin-request-create", authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-  const id = (req as any).user.id;
-const {hospitalId}=req.body
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id }
-    });
-
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    const superadmin = await prisma.user.findFirst({
-      where: { role: "SUPERADMIN" }
-    });
-
-    if (!superadmin) return res.status(404).json({ message: "Super Admin not found" });
-
-    const createdRequest = await prisma.request.create({
-      data: {
-        userEmail: user.email,
-        user: {
-          connect: {
-            id: superadmin.id
-          }
-        },
-        hospital:{
-          connect:{
-            id:hospitalId
-          }
-        },
-        expiryTime: new Date(Date.now() + (7 * 24 * 60 * 60 * 1000))
-      }
-    });
-
-    return res.status(201).json({ message: "Request Succesfully Created", request: createdRequest })
-  }
-  catch (err) {
-    console.error("Error in creating admin request:", err);
-    return res.status(500).json({ message: "Internal Server Error" })
-  }
-}))
-
-//* verified
-router.get("/admin-route", authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user.id;
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        role: "ADMIN"
-      }
-    });
-
-    res.status(200).json({ "Message": "Admin role updated for user!" })
-  } catch (error) {
-    console.error("Error in catch block", error);
-    res.status(500).json({ "message": "Internal Server Error!" });
-  }
-}));
-
 
 router.delete('/documents/:documentUrl', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
@@ -608,95 +514,6 @@ router.post('/google', asyncHandler(async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Google auth error:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-}));
-
-router.post('/documents/create', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).user.id;
-
-    // Check if record already exists (unique constraint)
-    const existing = await prisma.medicalRecord.findUnique({
-      where: { userId }
-    });
-    if (existing) {
-      return res.status(400).json({ message: 'Medical record already exists.' });
-    }
-
-    const record = await prisma.medicalRecord.create({
-      data: {
-        userId,
-        history: [],
-        documents: []
-      }
-    });
-
-    return res.status(201).json({ message: 'Medical record created!', record });
-  } catch (error) {
-    console.error('Error creating medical record:', error);
-    return res.status(500).json({ message: 'Failed to create medical record' });
-  }
-}));
-
-//* verified
-router.post('/send-verification-code', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
-  try {
-    const { email } = req.body;
-    const userId = (req as any).user.id;
-
-    if (!email) {
-      return res.status(400).json({ message: "Email is required" });
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { id: userId }
-    });
-
-    if (!currentUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        email,
-        id: { not: userId }
-      }
-    });
-
-    if (existingUser) {
-      return res.status(400).json({ message: "Email is already in use" });
-    }
-
-    const verifyCode = generateVerificationCode();
-
-    // Update current user with new verification code
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        verifyCode,
-        verified: false,
-        email
-      }
-    });
-
-    const emailResult = await sendVerificationEmail(email, verifyCode, 'signup');
-    if (!emailResult.success) {
-      // Revert the user update since email sending failed
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          email: currentUser.email, // Use stored original email
-          verified: currentUser.verified, // Use stored original verification status
-          verifyCode: null
-        }
-      });
-      return res.status(500).json({ message: "Failed to send verification email. Please try again." });
-    }
-
-    res.status(200).json({ message: "Verification code sent successfully" });
-  } catch (error) {
-    console.error("Send verification code error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 }));

@@ -68,7 +68,7 @@ model Hospital {
   labs         Lab[]
   status       Status   @default(ACTIVE)
   locationId   String
-  request Request?
+  request      Request?
   location     Location @relation(fields: [locationId], references: [id])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -161,11 +161,13 @@ enum AppointmentStatus {
   CANCELLED
   RESCHEDULED
 }
-enum Gender{
+
+enum Gender {
   MALE
   FEMALE
   OTHER
 }
+
 model MedicalTest {
   id           String        @id @default(uuid())
   name         String
@@ -209,14 +211,14 @@ model MedicalRecord {
 }
 
 model Request {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   userEmail  String
   expiryTime DateTime
-  userId     String
-  status     Status   @default(PENDING)
-  hospital Hospital  @relation(fields: [hospitalId],references: [id])
-hospitalId String @unique
-  user       User     @relation(fields: [userId], references: [id])
+  status     Status    @default(PENDING)
+  hospitalId String?   @unique
+  hospital   Hospital? @relation(fields: [hospitalId], references: [id])
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id])
 }
 
 enum Role {
