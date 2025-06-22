@@ -279,7 +279,7 @@ router.put('/profile', authenticateToken, asyncHandler(async (req: Request, res:
     if (name) updateData.name = name;
     if (phone) updateData.phone = phone;
     if (dob) updateData.dob = new Date(dob);
-    if (gender) updateData.gender = gender;
+    if (gender) updateData.gender = gender.toUpperCase();
     if (address) updateData.address = address;
 
     const updatedUser = await prisma.user.update({
