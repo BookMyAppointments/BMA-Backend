@@ -156,84 +156,84 @@ router.get('/requests/:requestId/:action', asyncHandler(authenticateToken), asyn
   const adminId = (req as any).user.id;
 
   try {
-    const admin = await prisma.user.findUnique({ where: { id: adminId } });
-    if (!admin || admin.role !== 'SUPERADMIN') {
-      return res.status(403).json({ message: "Unauthorized: Admin access required" });
-    }
+    
+    // const admin = await prisma.user.findUnique({ where: { id: adminId } });
+    // if (!admin || admin.role !== 'SUPERADMIN') {
+    //   return res.status(403).json({ message: "Unauthorized: Admin access required" });
+    // }
 
-    const request = await prisma.request.findUnique({
-      where: { id: requestId },
-      include: { user: true }
-    });
+    const requests = await prisma.request.findMany()
+    console.log(requests);
+    
 
-    if (!request) {
-      return res.status(404).json({ message: "Request not found" });
-    }
+    // if (!request) {
+    //   return res.status(404).json({ message: "Request not found" });
+    // }
 
-    const frontendUrl = process.env.FRONTEND_URL;
-    if (!frontendUrl) {
-      return res.status(500).json({ message: "FRONTEND_URL is not configured in environment" });
-    }
+    // const frontendUrl = process.env.FRONTEND_URL;
+    // if (!frontendUrl) {
+    //   return res.status(500).json({ message: "FRONTEND_URL is not configured in environment" });
+    // }
 
-    if (action === 'approve') {
-      try {
-        const [link] = await prisma.$transaction(async (tx) => {
-          const createdLink = await tx.link.create({
-            data: {
-              url: `${frontendUrl}/admin/hospital/create/32`, // You may want to replace hardcoded `32`
-              isActive: true
-            }
-          });
+    // if (action === 'approve') {
+    //   try {
+    //     const [link] = await prisma.$transaction(async (tx) => {
+    //       const createdLink = await tx.link.create({
+    //         data: {
+    //           url: `${frontendUrl}/admin/hospital/create/32`, // You may want to replace hardcoded `32`
+    //           isActive: true
+    //         }
+    //       });
 
-          await tx.request.update({
-            where: { id: requestId },
-            data: { status: "ACTIVE" }
-          });
+    //       await tx.request.update({
+    //         where: { id: requestId },
+    //         data: { status: "ACTIVE" }
+    //       });
 
-          await tx.user.update({
-            where: { id: request.user.id },
-            data: { role: "ADMIN" }
-          });
+    //       await tx.user.update({
+    //         where: { id: request.user.id },
+    //         data: { role: "ADMIN" }
+    //       });
 
-          return [createdLink];
-        });
+    //       return [createdLink];
+    //     });
 
-        await sendHospitalCreationMail({
-          email: request.user.email,
-          linkId: link.id,
-          frontendUrl
-        });
+    //     await sendHospitalCreationMail({
+    //       email: request.user.email,
+    //       linkId: link.id,
+    //       frontendUrl
+    //     });
 
-        return res.status(200).json({
-          message: "Request approved and email sent",
-          linkId: link.id
-        });
+    //     return res.status(200).json({
+    //       message: "Request approved and email sent",
+    //       linkId: link.id
+    //     });
 
-      } catch (txnError) {
-        console.error("Transaction error (approve):", txnError);
-        return res.status(500).json({ message: "Failed to approve request. No changes made." });
-      }
-    }
+    //   } catch (txnError) {
+    //     console.error("Transaction error (approve):", txnError);
+    //     return res.status(500).json({ message: "Failed to approve request. No changes made." });
+    //   }
+    // }
 
-    else if (action === 'reject') {
-      try {
-        await prisma.request.update({
-          where: { id: requestId },
-          data: { status: 'INACTIVE' }
-        });
+    // else if (action === 'reject') {
+    //   try {
+    //     await prisma.request.update({
+    //       where: { id: requestId },
+    //       data: { status: 'INACTIVE' }
+    //     });
 
 
         return res.status(200).json({
           message: "Request rejected successfully"
         });
 
-      } catch (rejError) {
-        console.error("Rejection error:", rejError);
-        return res.status(500).json({ message: "Failed to reject request" });
-      }
-    }
+    //   } catch (rejError) {
+    //     console.error("Rejection error:", rejError);
+    //     return res.status(500).json({ message: "Failed to reject request" });
+    //   }
+    // }
 
-    return res.status(400).json({ message: "Invalid action" });
+    // return res.status(400).json({ message: "Invalid action" });
 
   } catch (error) {
     console.error("Request handler error:", error);
@@ -439,6 +439,7 @@ router.post('/reset-password', authenticateToken, asyncHandler(async (req: Reque
 
 router.get("/admin-verify-code/:code", asyncHandler(async (req: Request, res: Response) => {
   const { code } = req.params
+  
   try {
     const link = await prisma.link.findUnique({
       where: {
@@ -455,9 +456,9 @@ router.get("/admin-verify-code/:code", asyncHandler(async (req: Request, res: Re
   }
 }))
 
-router.get("/admin-request-create", authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+router.post("/admin-request-create", authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   const id = (req as any).user.id;
-
+const {hospitalId}=req.body
   try {
     const user = await prisma.user.findUnique({
       where: { id }
@@ -477,6 +478,11 @@ router.get("/admin-request-create", authenticateToken, asyncHandler(async (req: 
         user: {
           connect: {
             id: superadmin.id
+          }
+        },
+        hospital:{
+          connect:{
+            id:hospitalId
           }
         },
         expiryTime: new Date(Date.now() + (7 * 24 * 60 * 60 * 1000))
