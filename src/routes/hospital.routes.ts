@@ -149,6 +149,7 @@ router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Requ
 
         res.status(201).json({
             message: "Hospital created successfully",
+            success : true,
         });
     } catch (error) {
         console.error("Error in hospital creation:", error);
