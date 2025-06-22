@@ -67,93 +67,66 @@ router.get("/admin-verify-code/:code", asyncHandler(async (req: Request, res: Re
     }
 }));
 
-router.get('/requests/:requestId/:action', asyncHandler(authenticateToken), asyncHandler(async (req: Request, res: Response) => {
-    const { requestId, action } = req.params;
-    const adminId = (req as any).user.id;
-
+router.get('/get-all-requests', authenticateToken, isSuperAdmin, asyncHandler(async (req: Request, res: Response) => {
     try {
-
-        // const admin = await prisma.user.findUnique({ where: { id: adminId } });
-        // if (!admin || admin.role !== 'SUPERADMIN') {
-        //   return res.status(403).json({ message: "Unauthorized: Admin access required" });
-        // }
-
-        const requests = await prisma.request.findMany();
-        console.log(requests);
-
-
-        // if (!request) {
-        //   return res.status(404).json({ message: "Request not found" });
-        // }
-
-        // const frontendUrl = process.env.FRONTEND_URL;
-        // if (!frontendUrl) {
-        //   return res.status(500).json({ message: "FRONTEND_URL is not configured in environment" });
-        // }
-
-        // if (action === 'approve') {
-        //   try {
-        //     const [link] = await prisma.$transaction(async (tx) => {
-        //       const createdLink = await tx.link.create({
-        //         data: {
-        //           url: `${frontendUrl}/admin/hospital/create/32`, // You may want to replace hardcoded `32`
-        //           isActive: true
-        //         }
-        //       });
-
-        //       await tx.request.update({
-        //         where: { id: requestId },
-        //         data: { status: "ACTIVE" }
-        //       });
-
-        //       await tx.user.update({
-        //         where: { id: request.user.id },
-        //         data: { role: "ADMIN" }
-        //       });
-
-        //       return [createdLink];
-        //     });
-
-        //     await sendHospitalCreationMail({
-        //       email: request.user.email,
-        //       linkId: link.id,
-        //       frontendUrl
-        //     });
-
-        //     return res.status(200).json({
-        //       message: "Request approved and email sent",
-        //       linkId: link.id
-        //     });
-
-        //   } catch (txnError) {
-        //     console.error("Transaction error (approve):", txnError);
-        //     return res.status(500).json({ message: "Failed to approve request. No changes made." });
-        //   }
-        // }
-
-        // else if (action === 'reject') {
-        //   try {
-        //     await prisma.request.update({
-        //       where: { id: requestId },
-        //       data: { status: 'INACTIVE' }
-        //     });
-
-
-        return res.status(200).json({
-            message: "Request rejected successfully"
+        const adminRequests = await prisma.request.findMany({
+            where : {
+                status: "PENDING",
+            },
+            select : {
+                id: true,
+                userEmail : true,
+                expiryTime: true,
+                status : true,
+                hospital : {
+                    select : {
+                        id: true,
+                        name: true,
+                        services: true,
+                        departments: true,
+                        facilities: true,
+                        location: {
+                            select: {
+                               lat : true,
+                               lng : true,
+                               address: true,
+                            }
+                        },
+                    }
+                },
+            },
         });
 
-        //   } catch (rejError) {
-        //     console.error("Rejection error:", rejError);
-        //     return res.status(500).json({ message: "Failed to reject request" });
-        //   }
-        // }
+        if (adminRequests.length === 0) {
+            return res.status(404).json({ message: "No admin requests found" });
+        }
 
-        // return res.status(400).json({ message: "Invalid action" });
+        res.status(200).json(adminRequests);
 
     } catch (error) {
-        console.error("Request handler error:", error);
-        return res.status(500).json({ message: "Internal server error" });
+        console.error("Error fetching admin requests:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}));
+
+router.put('/update-status', authenticateToken, isSuperAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const { requestId, status } = req.body;
+
+        if (!requestId || !status) {
+            return res.status(400).json({ message: "Request ID and status are required" });
+        }
+
+        const updatedRequest = await prisma.request.update({
+            where: { id: requestId },
+            data: { status }
+        });
+
+        res.status(200).json(updatedRequest);
+
+    } catch (error) {
+        console.error("Error updating request status:", error);
+        res.status(500).json({ message: "Internal server error" });
     }
 }));
 

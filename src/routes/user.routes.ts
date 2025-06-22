@@ -151,7 +151,6 @@ router.post('/signin', asyncHandler(async (req: Request, res: Response) => {
 router.get('/profile', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
-    console.log("User id:", userId);
 
     const user = await prisma.user.findFirst({
       where: { id: userId },
