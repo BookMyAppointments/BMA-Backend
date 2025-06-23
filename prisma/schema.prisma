@@ -100,11 +100,11 @@ model Link {
 
 model Availability {
   id        String  @id @default(uuid())
-  doctorId  String
   day       String
   startTime String
   endTime   String
-  doctor    Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  doctorId  String?
+  doctor    Doctor? @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   lab       Lab?    @relation(fields: [labId], references: [id])
   labId     String?
 }

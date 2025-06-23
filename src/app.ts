@@ -11,13 +11,11 @@ import appointmentRoutes from './routes/appointment.routes';
 import testRoutes from './routes/test.routes';
 import file_uploadRoutes from './services/file-upload.service';
 import adminRoutes from './routes/admin.routes';
-// import doctor_hospitalRoutes from './routes/doctor-hospital.routes';
 // import paymentRouter from './routes/payment.routes';
 
 dotenv.config();
 const app: Application = express();
 
-// Middleware
 app.use(express.json());
 app.use(cors({
     origin: [process.env.CORS_ORIGIN || 'http://localhost:5173', 'http://localhost:3000', 'https://doctor-frontend-sigma.vercel.app'],
@@ -37,7 +35,6 @@ app.use('/api/v1/search', searchRoutes);
 app.use('/api/v1/appointments', appointmentRoutes);
 app.use('/api/v1/tests', testRoutes);
 app.use('/api/v1/file-upload', file_uploadRoutes);
-// app.use('/api/v1/doctor-hospitals', doctor_hospitalRoutes);
 // app.use('/api/v1/payment', paymentRouter);
 
 export default app;
