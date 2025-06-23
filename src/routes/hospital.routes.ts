@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middlewares/auth.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
-import { isAdmin } from '../middlewares/admin.middleware';
+import { isAdmin, isSuperAdmin } from '../middlewares/admin.middleware';
 
 const router = Router();
 
@@ -215,80 +215,75 @@ router.get('/get-hospital-details', authenticateToken, isAdmin, asyncHandler(asy
     }
 }));
 
-// router.put('/update/:id', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
-//     const { id } = req.params;
-//     const {
-//         name,
-//         departments,
-//         facilities,
-//         services,
-//         hours,
-//         location
-//     } = req.body;
+router.put('/update', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.query;
+    const {
+        name,
+        departments,
+        facilities,
+        services,
+        hours,
+        location
+    } = req.body;
 
-//     const hospital = await prisma.hospital.findFirst({
-//         where: { id },
-//         include: { location: true }
-//     });
+    const hospital = await prisma.hospital.findFirst({
+        where: { id: id as string },
+        include: { location: true }
+    });
 
-//     if (!hospital) {
-//         return res.status(404).json({ message: "Hospital not found" });
-//     }
+    if (!hospital) {
+        return res.status(404).json({ message: "Hospital not found" });
+    }
 
-//     if (location) {
-//         await prisma.location.update({
-//             where: { id: hospital.locationId },
-//             data: {
-//                 lat: location.lat || hospital.location.lat,
-//                 lng: location.lng || hospital.location.lng,
-//                 address: location.address || hospital.location.address
-//             }
-//         });
-//     }
+    if (location) {
+        await prisma.location.update({
+            where: { id: hospital.locationId },
+            data: {
+                lat: location.lat || hospital.location.lat,
+                lng: location.lng || hospital.location.lng,
+                address: location.address || hospital.location.address
+            }
+        });
+    }
 
-//     const updatedHospital = await prisma.hospital.update({
-//         where: { id },
-//         data: {
-//             name,
-//             departments: departments || hospital.departments,
-//             facilities: facilities || hospital.facilities,
-//             services: services || hospital.services,
-//             hours: hours || hospital.hours
-//         },
-//         include: {
-//             location: true
-//         }
-//     });
+    const updatedHospital = await prisma.hospital.update({
+        where: { id: id as string },
+        data: {
+            name,
+            departments: departments || hospital.departments,
+            facilities: facilities || hospital.facilities,
+            services: services || hospital.services,
+            hours: hours || hospital.hours
+        },
+        include: {
+            location: true
+        }
+    });
 
-//     res.status(200).json({
-//         message: "Hospital updated successfully",
-//         hospital: updatedHospital
-//     });
-// }));
+    res.status(200).json({
+        message: "Hospital updated successfully",
+        hospital: updatedHospital
+    });
+}));
 
-// router.delete('/delete/:id', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
-//     const { id } = req.params;
+router.put('/suspend', authenticateToken, isSuperAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const { id } = req.query;
 
-//     // Get hospital to delete (with location)
-//     const hospital = await prisma.hospital.findUnique({
-//         where: { id },
-//         include: { location: true }
-//     });
+        if (!id) {
+            return res.status(400).json({ message: "Hospital ID is required" });
+        }
 
-//     if (!hospital) {
-//         return res.status(404).json({ message: "Hospital not found" });
-//     }
+        await prisma.hospital.update({
+            where: { id: id as string },
+            data: { status: "SUSPENDED" }
+        });
 
-//     // Delete hospital and its location
-//     await prisma.hospital.delete({
-//         where: { id }
-//     });
-
-//     await prisma.location.delete({
-//         where: { id: hospital.locationId }
-//     });
-
-//     res.status(200).json({ message: "Hospital deleted successfully" });
-// }));
+        res.status(200).json({ message: "Hospital deleted successfully" });
+    } catch (error) {
+        console.error("Error suspending hospital:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}));
 
 export default router;

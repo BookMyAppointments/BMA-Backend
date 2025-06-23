@@ -8,45 +8,57 @@ import { isAdmin } from '../middlewares/admin.middleware';
 
 const router = Router();
 
-//* ------------------------- DOCTOR PROFILE OPERATIONS ------------------------- *//
-
-//* Add a new doctor profile (verified**)
-router.post('/create/:hospitalId/:userId', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+router.put('/get/:id', asyncHandler(async (req: Request, res: Response) => {
   try {
-    const { hospitalId, userId } = req.params;
-    const { specialization, qualifications, price, about, email, name, }: Doctor = req.body;
+    const { doctorId } = req.params;
 
-    const existingDoctor = await prisma.doctor.findUnique({
-      where: { id: userId }
+    const doctor = await prisma.doctor.findUnique({
+      where: { id: doctorId }
     });
 
-    if (existingDoctor) {
-      return res.status(400).json({ message: "Doctor profile already exists" });
-    }
+    if (!doctor) return res.status(404).json({ message: "Doctor not found" });
+
+    res.status(200).json({
+      message: "Doctor profile updated successfully",
+      doctor: doctor
+    });
+  } catch (error) {
+    console.error("Error updating doctor profile:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}));
+
+router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { hospitalId } = req.query as { hospitalId: string };
+    const { email, name, phone, specialization, qualifications, about, price }: Doctor = req.body;
 
     const hospital = await prisma.hospital.findFirst({
       where: { id: hospitalId }
     });
 
-    if (!hospital) {
-      return res.status(400).json({ message: "This hospital does not exist!!" })
-    }
+    if (!hospital) return res.status(400).json({ message: "This hospital does not exist!!" })
 
-    if (!Array.isArray(specialization) || !Array.isArray(qualifications)) {
-      return res.status(400).json({ message: "Specialization and qualifications must be arrays" });
-    }
+    if (!Array.isArray(specialization) || !Array.isArray(qualifications)) return res.status(400).json({ message: "Specialization and qualifications must be arrays" });
 
     const doctor = await prisma.doctor.create({
       data: {
+        name,
+        email,
+        phone,
         specialization: specialization,
         qualifications: qualifications,
         price,
         about: about || "",
         ratings: 0,
-        name,
-        email
+        noOfPatients: 0,
+        hospital: {
+          connect: { id: hospitalId }
+        }
       },
     });
+
+    if (!doctor) return res.status(500).json({ message: "Failed to create doctor profile" });
 
     res.status(201).json({
       message: "Doctor profile created successfully",
@@ -58,7 +70,43 @@ router.post('/create/:hospitalId/:userId', authenticateToken, isAdmin, asyncHand
   }
 }));
 
-//* ------------------ Doctor Profile ------------------ *//
+router.put('/update', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { doctorId } = req.query as { doctorId: string };
+    const { email, name, phone, specialization, qualifications, about, price }: Doctor = req.body;
+
+    if (!Array.isArray(specialization) || !Array.isArray(qualifications)) return res.status(400).json({ message: "Specialization and qualifications must be arrays" });
+
+    const existingDoctor = await prisma.doctor.findUnique({
+      where: { id: doctorId }
+    });
+
+    if (!existingDoctor) return res.status(404).json({ message: "Doctor not found" });
+
+    const updateData: any = {
+      name: name || existingDoctor.name,
+      email: email || existingDoctor.email,
+      phone: phone || existingDoctor.phone,
+      specialization: specialization || existingDoctor.specialization,
+      qualifications: qualifications || existingDoctor.qualifications,
+      price: price || existingDoctor.price,
+      about: about || existingDoctor.about
+    };
+
+    const updatedDoctor = await prisma.doctor.update({
+      where: { id: doctorId },
+      data: updateData
+    });
+
+    res.status(200).json({
+      message: "Doctor profile updated successfully",
+      doctor: updatedDoctor
+    });
+  } catch (error) {
+    console.error("Error updating doctor profile:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+}));
 
 //* Get doc profile (verified**)
 router.get('/profile', authenticateToken, isDoctor, asyncHandler(async (req: Request, res: Response) => {
