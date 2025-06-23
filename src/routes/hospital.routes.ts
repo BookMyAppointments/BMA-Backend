@@ -149,11 +149,69 @@ router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Requ
 
         res.status(201).json({
             message: "Hospital created successfully",
-            success : true,
+            success: true,
         });
     } catch (error) {
         console.error("Error in hospital creation:", error);
         return res.status(500).json({ message: "Internal server error" });
+    }
+}));
+
+router.get('/get-hospital-details', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user.id;
+
+        const hospital = await prisma.hospital.findFirst({
+            where: {
+                adminId: userId,
+            },
+            select: {
+                id: true,
+                name: true,
+                departments: true,
+                facilities: true,
+                services: true,
+                hours: true,
+                location: {
+                    select: {
+                        lat: true,
+                        lng: true,
+                        address: true
+                    }
+                },
+                doctors: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        phone: true,
+                        picture: true,
+                    }
+                },
+                labs: {
+                    select: {
+                        id: true,
+                        name: true,
+                        picture: true,
+                        location: {
+                            select: {
+                                lat: true,
+                                lng: true,
+                                address: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (!hospital) return res.status(404).json({ message: "Hospital not found" });
+
+        res.status(200).json(hospital);
+
+    } catch (error) {
+        console.error("Error fetching hospital details:", error);
+        res.status(500).json({ message: "Internal server error" });
     }
 }));
 
