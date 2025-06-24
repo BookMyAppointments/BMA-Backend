@@ -5,225 +5,173 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { isAdmin } from '../middlewares/admin.middleware';
 
 const router = Router();
-//* -------------------------- LAB CRUD OPERATIONS -------------------------- *//
 
-//* Create a new lab (Admin only) (verified**)
-router.post('/create/:hospitalId', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
-    const { hospitalId } = req.params;
-    const {
-        name, 
-        services,
-        location 
-    } = req.body;
+router.get('/get/:labId', asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const { labId } = req.params;
 
-    // Check if hospital exists
-    const hospital = await prisma.hospital.findUnique({
-        where: { id: hospitalId }
-    });
-
-    if (!hospital) {
-        return res.status(404).json({ message: "Hospital not found" });
-    }
-
-    // Create location first
-    const newLocation = await prisma.location.create({
-        data: {
-            lat: location.lat,
-            lng: location.lng,
-            address: location.address
-        }
-    });    // Create lab with location
-    const lab = await prisma.lab.create({
-        data: {
-            name,
-            services: services || [],
-            hospital: {
-                connect: { id: hospitalId }
-            },
-            location: {
-                connect: { id: newLocation.id }
+        const lab = await prisma.lab.findUnique({
+            where: { id: labId },
+            include: {
+                location: true,
+                hospital: {
+                    include: {
+                        location: true
+                    }
+                },
+                tests: true,
+                availability: true
             }
-        },
-        include: {
-            location: true,
-            hospital: {
-                include: {
-                    location: true
-                }
-            },
-            tests: true,
-            availability: true
+        });
+
+        if (!lab) {
+            return res.status(404).json({ message: "Lab not found" });
         }
-    });
 
-    res.status(201).json({
-        message: "Lab created successfully",
-        lab
-    });
-}));
-
-//* Get all labs for a hospital (public) (verified**)
-router.get('/get/:hospitalId', asyncHandler(async (req: Request, res: Response) => {
-    const { hospitalId } = req.params;
-    const { service } = req.query;
-
-    const where: any = {
-        hospitalId
-    };
-
-    if (service) {
-        where.services = {
-            has: service as string
-        };
-    }    const labs = await prisma.lab.findMany({
-        where,
-        include: {
-            location: true,
-            hospital: {
-                include: {
-                    location: true
-                }
-            },
-            tests: true,
-            availability: true
-        }
-    });
-
-    res.status(200).json(labs);
-}));
-
-// Get all labs (public) (verified**)
-router.get('/all', asyncHandler(async (req: Request, res: Response) => {
-    const { service } = req.query;
-
-    const where: any = {};
-
-    if (service) {
-        where.services = {
-            has: service as string
-        };
+        res.status(200).json(lab);
+    } catch (error) {
+        console.error("Error finding lab:", error);
+        res.status(500).json({
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : "Unknown error"
+        });
     }
-
-    const labs = await prisma.lab.findMany({
-        where,
-        include: {
-            location: true,
-            hospital: {
-                include: {
-                    location: true
-                }
-            },
-            tests: true,
-            availability: true
-        }
-    });
-
-    res.status(200).json(labs);
 }));
 
-//* Get lab by ID (public) (verified**)
-router.get('/find/:id', asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const { hospitalId } = req.query as { hospitalId?: string };
+        const {
+            name,
+            description,
+            services,
+            hours,
+            location
+        } = req.body;
 
-    const lab = await prisma.lab.findUnique({
-        where: { id },
-        include: {
-            location: true,
-            hospital: {
-                include: {
-                    location: true
-                }
-            },
-            tests: true,
-            availability: true
+        if (!name || !location) {
+            return res.status(400).json({ message: "Name and location are required" });
         }
-    });
 
-    if (!lab) {
-        return res.status(404).json({ message: "Lab not found" });
-    }
+        if (hospitalId) {
+            const hospital = await prisma.hospital.findUnique({
+                where: { id: hospitalId }
+            });
 
-    res.status(200).json(lab);
-}));
+            if (!hospital) {
+                return res.status(404).json({ message: "Hospital not found" });
+            }
+        }
 
-//* Update lab (Admin only) (verified**)
-router.put('/update/:id', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { 
-        name, 
-        services, 
-        location 
-    } = req.body;
-
-    // Get lab to update
-    const lab = await prisma.lab.findUnique({
-        where: { id },
-        include: { location: true }
-    });
-
-    if (!lab) {
-        return res.status(404).json({ message: "Lab not found" });
-    }
-
-    // Update location if provided
-    if (location) {
-        await prisma.location.update({
-            where: { id: lab.locationId },
+        const newLocation = await prisma.location.create({
             data: {
-                lat: location.lat,
-                lng: location.lng,
+                lat: Number(location.lat),
+                lng: Number(location.lng),
                 address: location.address
             }
         });
-    }    // Update lab
-    const updatedLab = await prisma.lab.update({
-        where: { id },
-        data: {
-            name,
-            services: services || lab.services
-        },
-        include: {
-            location: true,
-            hospital: {
-                include: {
-                    location: true
-                }
-            },
-            tests: true,
-            availability: true
-        }
-    });
 
-    res.status(200).json({
-        message: "Lab updated successfully",
-        lab: updatedLab
-    });
+        const labData: any = {
+            name,
+            description,
+            address: location.address,
+            services: services || [],
+            hours: hours || null,
+            location: {
+                connect: { id: newLocation.id }
+            }
+        };
+
+        if (hospitalId) {
+            labData.hospital = {
+                connect: { id: hospitalId }
+            };
+        }
+
+        await prisma.lab.create({
+            data: labData
+        });
+
+        res.status(201).json({
+            message: "Lab created successfully",
+        });
+
+    } catch (error) {
+        console.error("Error creating lab:", error);
+        res.status(500).json({
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : "Unknown error"
+        });
+    }
 }));
 
-//* Delete lab (Admin only) (verified**)
-router.delete('/delete/:id', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+router.put('/update', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const { labId } = req.query;
+        const {
+            name,
+            description,
+            services,
+            hours,
+            location
+        } = req.body;
 
-    // Get lab to delete (with location)
-    const lab = await prisma.lab.findUnique({
-        where: { id },
-        include: { location: true }
-    });
+        if (!labId || typeof labId !== 'string') {
+            return res.status(400).json({ message: "Lab ID is required in query parameters" });
+        }
 
-    if (!lab) {
-        return res.status(404).json({ message: "Lab not found" });
+        const lab = await prisma.lab.findUnique({
+            where: { id: labId },
+            include: { location: true }
+        });
+
+        if (!lab) {
+            return res.status(404).json({ message: "Lab not found" });
+        }
+
+        if (location) {
+            await prisma.location.update({
+                where: { id: lab.locationId },
+                data: {
+                    lat: location.lat !== undefined ? Number(location.lat) : lab.location.lat,
+                    lng: location.lng !== undefined ? Number(location.lng) : lab.location.lng,
+                    address: location.address !== undefined ? location.address : lab.location.address
+                }
+            });
+        }
+
+        const updatedLab = await prisma.lab.update({
+            where: { id: labId },
+            data: {
+                name: name !== undefined ? name : lab.name,
+                description: description !== undefined ? description : lab.description,
+                address: location.address !== undefined ? location.address : lab.address,
+                services: services !== undefined ? services : lab.services,
+                hours: hours !== undefined ? hours : lab.hours
+            },
+            include: {
+                location: true,
+                hospital: {
+                    include: {
+                        location: true
+                    }
+                },
+                tests: true,
+                availability: true
+            }
+        });
+
+        res.status(200).json({
+            message: "Lab updated successfully",
+            lab: updatedLab
+        });
+    } catch (error) {
+        console.error("Error updating lab:", error);
+        res.status(500).json({
+            message: "Internal server error",
+            error: error instanceof Error ? error.message : "Unknown error"
+        });
     }
-
-    // Delete lab and its location
-    await prisma.lab.delete({
-        where: { id }
-    });
-
-    await prisma.location.delete({
-        where: { id: lab.locationId }
-    });
-
-    res.status(200).json({ message: "Lab deleted successfully" });
 }));
 
 export default router;
