@@ -74,7 +74,7 @@ router.get('/get/:id', asyncHandler(async (req: Request, res: Response) => {
 router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
 
     const { uniqueCode } = req.query;
-    const uniqueLink = `${process.env.CORS_ORIGIN}/admin/hospital/create?uniqueCode=${uniqueCode}`;
+    // const uniqueLink = `${process.env.CORS_ORIGIN}/admin/hospital/create?uniqueCode=${uniqueCode}`;
 
     const userId = (req as any).user.id;
     const userEmail = (req as any).user.email
@@ -139,7 +139,7 @@ router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Requ
 
             await tx.link.update({
                 where: {
-                    url: uniqueLink
+                    url: uniqueCode as string
                 },
                 data: {
                     isActive: false

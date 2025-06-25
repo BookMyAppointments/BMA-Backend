@@ -20,7 +20,8 @@ router.get('/make-admin', authenticateToken, isSuperAdmin, asyncHandler(async (r
             return res.status(404).json({ message: "User not found" });
         }
 
-        const uniqueLink = `${process.env.CORS_ORIGIN}/admin/hospital/create?uniqueCode=${generateUniqueId()}`;
+        // const uniqueLink = `${process.env.CORS_ORIGIN}/admin/hospital/create?uniqueCode=${generateUniqueId()}`;
+        const uniqueCode = generateUniqueId();
 
         await prisma.$transaction(([
             prisma.user.update({
@@ -29,13 +30,13 @@ router.get('/make-admin', authenticateToken, isSuperAdmin, asyncHandler(async (r
             }),
             prisma.link.create({
                 data: {
-                    url: uniqueLink,
+                    url: uniqueCode,
                     isActive: true
                 }
             })
         ]));
 
-        res.status(200).json({ link: uniqueLink, message: "User role updated to ADMIN and link created successfully" });
+        res.status(200).json({ code: uniqueCode, message: "User role updated to ADMIN and link created successfully" });
 
     } catch (error) {
         console.error("Error in make-admin route:", error);
@@ -44,13 +45,13 @@ router.get('/make-admin', authenticateToken, isSuperAdmin, asyncHandler(async (r
 }));
 
 router.get("/admin-verify-code/:code", asyncHandler(async (req: Request, res: Response) => {
-    const { code } = req.params
+    const { code } = req.params;
 
-    const uniqueLink = `${process.env.CORS_ORIGIN}/admin/hospital/create?uniqueCode=${code}`;
+    // const uniqueLink = `${process.env.CORS_ORIGIN}/admin/hospital/create?uniqueCode=${code}`;
     try {
         const link = await prisma.link.findUnique({
             where: {
-                url: uniqueLink
+                url: code
             }
         });
 
@@ -70,16 +71,16 @@ router.get("/admin-verify-code/:code", asyncHandler(async (req: Request, res: Re
 router.get('/get-all-requests', authenticateToken, isSuperAdmin, asyncHandler(async (req: Request, res: Response) => {
     try {
         const adminRequests = await prisma.request.findMany({
-            where : {
+            where: {
                 status: "PENDING",
             },
-            select : {
+            select: {
                 id: true,
-                userEmail : true,
+                userEmail: true,
                 expiryTime: true,
-                status : true,
-                hospital : {
-                    select : {
+                status: true,
+                hospital: {
+                    select: {
                         id: true,
                         name: true,
                         services: true,
@@ -87,9 +88,9 @@ router.get('/get-all-requests', authenticateToken, isSuperAdmin, asyncHandler(as
                         facilities: true,
                         location: {
                             select: {
-                               lat : true,
-                               lng : true,
-                               address: true,
+                                lat: true,
+                                lng: true,
+                                address: true,
                             }
                         },
                     }
