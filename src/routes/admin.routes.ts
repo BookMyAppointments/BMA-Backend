@@ -3,8 +3,9 @@ import { authenticateToken } from "../middlewares/auth.middleware";
 import { asyncHandler } from "../utils/asyncHandler";
 import { prisma } from "../lib/prisma";
 import { Request, Response } from "express";
-import { isSuperAdmin } from "../middlewares/admin.middleware";
+import { isAdmin, isSuperAdmin } from "../middlewares/admin.middleware";
 import { generateUniqueId } from "../utils/helpers";
+import { AppointmentStatus } from "@prisma/client";
 
 const router = Router();
 
@@ -129,6 +130,31 @@ router.put('/update-status', authenticateToken, isSuperAdmin, asyncHandler(async
         console.error("Error updating request status:", error);
         res.status(500).json({ message: "Internal server error" });
     }
+}));
+
+router.get('/:appointmentId/:action', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    const { appointmentId, action } = req.params;
+
+    
+    const statusMap: Record<string, AppointmentStatus> = {
+        confirm: "CONFIRMED",
+        complete: "COMPLETED",
+        cancel: "CANCELLED",
+        reschedule: "RESCHEDULED"
+    };
+
+    const newStatus = statusMap[action.toLowerCase()];
+    if (!newStatus) {
+        return res.status(400).json({ message: "Invalid action" });
+    }
+
+    // Update appointment status
+    const updated = await prisma.appointment.update({
+        where: { id: appointmentId },
+        data: { status: newStatus }
+    });
+
+    res.status(200).json({ message: `Appointment marked as ${newStatus}`, appointment: updated });
 }));
 
 export default router;
