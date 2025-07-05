@@ -121,9 +121,9 @@ router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Requ
                     location: {
                         connect: { id: newLocation.id }
                     },
-                    admin: {
-                        connect: { id: userId }
-                    }
+                    // admin: {
+                    //     connect: { id: userId }
+                    // }
                 }
             });
 
@@ -133,11 +133,16 @@ router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Requ
                     hospital: {
                         connect: { id: hospital.id }
                     },
-                    expiryTime: new Date(Date.now() + 24 * 60 * 60 * 1000)
+                    expiryTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
+                    user:{
+                        connect:{
+                            id:userId
+                        }
+                    }
                 }
             });
 
-            await tx.link.update({
+            await tx.link.updateMany({
                 where: {
                     url: uniqueCode as string
                 },

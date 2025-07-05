@@ -170,6 +170,29 @@ router.get('/profile', authenticateToken, asyncHandler(async (req: Request, res:
   }
 }));
 
+router.get("/get/:id", asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        medicalRecord: true,
+        requests: true
+      }
+    });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const { password, ...userWithoutPassword } = user;
+    return res.status(200).json(userWithoutPassword);
+  } catch (error) {
+    console.error("Get user by ID error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+));
+
+
 router.put('/profile', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
