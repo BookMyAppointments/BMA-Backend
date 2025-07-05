@@ -246,7 +246,7 @@ router.put('/update', authenticateToken, isAdmin, asyncHandler(async (req: Reque
         });
     }
 
-    const updatedHospital = await prisma.hospital.update({
+    await prisma.hospital.update({
         where: { id: id as string },
         data: {
             name,
@@ -254,15 +254,11 @@ router.put('/update', authenticateToken, isAdmin, asyncHandler(async (req: Reque
             facilities: facilities || hospital.facilities,
             services: services || hospital.services,
             hours: hours || hospital.hours
-        },
-        include: {
-            location: true
         }
     });
 
     res.status(200).json({
         message: "Hospital updated successfully",
-        hospital: updatedHospital
     });
 }));
 

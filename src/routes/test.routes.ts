@@ -6,8 +6,6 @@ import { isLab } from '../middlewares/lab.middleware';
 
 const router = Router();
 
-//* -------------------------  MEDICAL TEST CRUD OPERATIONS ------------------------- *// 
-
 //* Create a new medical test (Admin/Lab)
 router.post('/create', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
     try {
