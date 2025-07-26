@@ -224,6 +224,14 @@ model Request {
   user       User?     @relation(fields: [userId], references: [id])
 }
 
+model BannerImages {
+  id        String   @id @default(uuid())
+  imageUrl  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum Role {
   NORMAL
   ADMIN

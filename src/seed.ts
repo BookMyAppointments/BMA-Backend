@@ -1,635 +1,334 @@
-import { PrismaClient, Role, Status, AppointmentStatus } from '@prisma/client';
-import { hash } from 'bcrypt';
-
+const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log('Starting database seeding...');
+// Image URLs
+const DOCTOR_MALE_IMAGE = "https://static.vecteezy.com/system/resources/thumbnails/026/375/249/small_2x/ai-generative-portrait-of-confident-male-doctor-in-white-coat-and-stethoscope-standing-with-arms-crossed-and-looking-at-camera-photo.jpg";
+const DOCTOR_FEMALE_IMAGE = "https://img.freepik.com/free-photo/beautiful-young-female-doctor-looking-camera-office_1301-7807.jpg?semt=ais_hybrid&w=740&q=80";
+const HOSPITAL_IMAGE = "https://media.gettyimages.com/id/1312706413/photo/modern-hospital-building.jpg?s=612x612&w=gi&k=20&c=1-EC4Mxf--5u4ItDIzrIOrduXlbKRnbx9xWWtiifrDo=";
+const HOSPITAL_BANNER = "https://picsum.photos/1200/400";
+const LAB_IMAGE = "https://media.gettyimages.com/id/1312706413/photo/modern-hospital-building.jpg?s=612x612&w=gi&k=20&c=1-EC4Mxf--5u4ItDIzrIOrduXlbKRnbx9xWWtiifrDo=";
+const LAB_BANNER = "https://picsum.photos/1200/400";
 
-  // Clear existing data (optional - uncomment if needed)
-  // await prisma.testResult.deleteMany();
-  // await prisma.appointment.deleteMany();
-  // await prisma.medicalTest.deleteMany();
-  // await prisma.availability.deleteMany();
-  // await prisma.review.deleteMany();
-  // await prisma.notification.deleteMany();
-  // await prisma.medicalRecord.deleteMany();
-  // await prisma.request.deleteMany();
-  // await prisma.doctor.deleteMany();
-  // await prisma.lab.deleteMany();
-  // await prisma.hospital.deleteMany();
-  // await prisma.user.deleteMany();
-  // await prisma.location.deleteMany();
+// Sample data arrays
+const hospitalNames = [
+  "Apollo Hospital", "Fortis Healthcare", "Max Super Speciality Hospital", "Medanta - The Medicity",
+  "AIIMS Delhi", "Lilavati Hospital", "Kokilaben Dhirubhai Ambani Hospital", "Manipal Hospital",
+  "Narayana Health", "Columbia Asia Hospital", "Global Hospital", "Ruby Hall Clinic",
+  "Wockhardt Hospital", "Breach Candy Hospital", "Jaslok Hospital", "P.D. Hinduja Hospital",
+  "King Edward Memorial Hospital", "Sir Ganga Ram Hospital", "Safdarjung Hospital", "BLK Super Speciality Hospital"
+];
 
-  // Create locations
-  const locations = await Promise.all([
-    prisma.location.create({
-      data: {
-        lat: 26.9124,
-        lng: 75.7873,
-        address: 'C-Scheme, Jaipur, Rajasthan 302001',
-      },
-    }),
-    prisma.location.create({
-      data: {
-        lat: 26.8849,
-        lng: 75.8069,
-        address: 'Malviya Nagar, Jaipur, Rajasthan 302017',
-      },
-    }),
-    prisma.location.create({
-      data: {
-        lat: 26.9390,
-        lng: 75.8231,
-        address: 'Civil Lines, Jaipur, Rajasthan 302006',
-      },
-    }),
-    prisma.location.create({
-      data: {
-        lat: 26.8467,
-        lng: 75.8056,
-        address: 'Vaishali Nagar, Jaipur, Rajasthan 302021',
-      },
-    }),
-    prisma.location.create({
-      data: {
-        lat: 26.9587,
-        lng: 75.7804,
-        address: 'Bani Park, Jaipur, Rajasthan 302016',
-      },
-    }),
-    prisma.location.create({
-      data: {
-        lat: 26.8900,
-        lng: 75.8367,
-        address: 'Mansarovar, Jaipur, Rajasthan 302020',
-      },
-    }),
-    prisma.location.create({
-      data: {
-        lat: 26.9200,
-        lng: 75.8100,
-        address: 'Tonk Road, Jaipur, Rajasthan 302018',
-      },
-    }),
-    prisma.location.create({
-      data: {
-        lat: 26.8700,
-        lng: 75.7900,
-        address: 'Sodala, Jaipur, Rajasthan 302019',
-      },
-    }),
-  ]);
+const doctorNames = {
+  male: [
+    "Dr. Rajesh Kumar", "Dr. Amit Sharma", "Dr. Suresh Patel", "Dr. Vikram Singh", "Dr. Arjun Gupta",
+    "Dr. Kiran Reddy", "Dr. Manoj Agarwal", "Dr. Deepak Joshi", "Dr. Ravi Mehta", "Dr. Sandeep Verma",
+    "Dr. Ashish Tiwari", "Dr. Nitin Kulkarni", "Dr. Pradeep Nair", "Dr. Rohit Malhotra", "Dr. Sanjay Chopra",
+    "Dr. Vijay Khanna", "Dr. Ankit Bansal", "Dr. Harish Yadav", "Dr. Gaurav Saxena", "Dr. Naveen Goel"
+  ],
+  female: [
+    "Dr. Priya Sharma", "Dr. Sunita Gupta", "Dr. Kavita Patel", "Dr. Meera Singh", "Dr. Neha Agarwal",
+    "Dr. Ritu Verma", "Dr. Anjali Reddy", "Dr. Pooja Joshi", "Dr. Sonia Mehta", "Dr. Rekha Nair",
+    "Dr. Shweta Kulkarni", "Dr. Nisha Malhotra", "Dr. Preeti Chopra", "Dr. Swati Khanna", "Dr. Divya Bansal",
+    "Dr. Archana Yadav", "Dr. Shreya Saxena", "Dr. Nikita Goel", "Dr. Arpita Das", "Dr. Manisha Roy"
+  ]
+};
 
-  // Create hospitals
-  const hospitals = await Promise.all([
-    prisma.hospital.create({
-      data: {
-        name: 'Fortis Escorts Hospital',
-        picture: 'https://example.com/fortis.jpg',
-        description: 'Multi-specialty hospital with advanced medical facilities',
-        banner: 'https://example.com/fortis-banner.jpg',
-        address: 'Jawahar Lal Nehru Marg, Malviya Nagar, Jaipur',
-        departments: ['Cardiology', 'Neurology', 'Orthopedics', 'Oncology', 'Emergency'],
-        facilities: ['ICU', 'NICU', 'Operation Theater', 'Blood Bank', 'Pharmacy'],
-        services: ['24/7 Emergency', 'Ambulance', 'Home Care', 'Telemedicine'],
-        hours: {
-          monday: '24/7',
-          tuesday: '24/7',
-          wednesday: '24/7',
-          thursday: '24/7',
-          friday: '24/7',
-          saturday: '24/7',
-          sunday: '24/7'
-        },
-        noOfPatients: 1250,
-        locationId: locations[0].id,
-      },
-    }),
-    prisma.hospital.create({
-      data: {
-        name: 'Mahatma Gandhi Medical College & Hospital',
-        picture: 'https://example.com/mgmc.jpg',
-        description: 'Government medical college and hospital',
-        banner: 'https://example.com/mgmc-banner.jpg',
-        address: 'Sitapura Industrial Area, Jaipur',
-        departments: ['General Medicine', 'Surgery', 'Pediatrics', 'Gynecology', 'Psychiatry'],
-        facilities: ['Emergency Ward', 'Laboratory', 'Radiology', 'Blood Bank'],
-        services: ['OPD', 'IPD', 'Emergency', 'Laboratory Services'],
-        hours: {
-          monday: '08:00-20:00',
-          tuesday: '08:00-20:00',
-          wednesday: '08:00-20:00',
-          thursday: '08:00-20:00',
-          friday: '08:00-20:00',
-          saturday: '08:00-14:00',
-          sunday: '08:00-14:00'
-        },
-        noOfPatients: 850,
-        locationId: locations[1].id,
-      },
-    }),
-    prisma.hospital.create({
-      data: {
-        name: 'Narayana Multispeciality Hospital',
-        picture: 'https://example.com/narayana.jpg',
-        description: 'Advanced healthcare with cutting-edge technology',
-        banner: 'https://example.com/narayana-banner.jpg',
-        address: 'Sector 28, Pratap Nagar, Jaipur',
-        departments: ['Cardiology', 'Neurosurgery', 'Gastroenterology', 'Urology', 'Dermatology'],
-        facilities: ['Cath Lab', 'MRI', 'CT Scan', 'Dialysis Unit', 'Physiotherapy'],
-        services: ['Health Checkups', 'Surgical Procedures', 'Diagnostic Services'],
-        hours: {
-          monday: '24/7',
-          tuesday: '24/7',
-          wednesday: '24/7',
-          thursday: '24/7',
-          friday: '24/7',
-          saturday: '24/7',
-          sunday: '24/7'
-        },
-        noOfPatients: 920,
-        locationId: locations[2].id,
-      },
-    }),
-    prisma.hospital.create({
-      data: {
-        name: 'Apex Hospital',
-        picture: 'https://example.com/apex.jpg',
-        description: 'Quality healthcare with personalized care',
-        banner: 'https://example.com/apex-banner.jpg',
-        address: 'Sector 43, Vaishali Nagar, Jaipur',
-        departments: ['Internal Medicine', 'Surgery', 'Orthopedics', 'ENT', 'Ophthalmology'],
-        facilities: ['Digital X-Ray', 'Ultrasound', 'ECG', 'Laboratory', 'Pharmacy'],
-        services: ['Consultation', 'Minor Surgery', 'Health Screening'],
-        hours: {
-          monday: '09:00-21:00',
-          tuesday: '09:00-21:00',
-          wednesday: '09:00-21:00',
-          thursday: '09:00-21:00',
-          friday: '09:00-21:00',
-          saturday: '09:00-18:00',
-          sunday: '10:00-16:00'
-        },
-        noOfPatients: 650,
-        locationId: locations[3].id,
-      },
-    }),
-    prisma.hospital.create({
-      data: {
-        name: 'CK Birla Hospital',
-        picture: 'https://example.com/ckbirla.jpg',
-        description: 'Comprehensive healthcare services',
-        banner: 'https://example.com/ckbirla-banner.jpg',
-        address: 'RNT Marg, Near SMS Stadium, Jaipur',
-        departments: ['Cardiology', 'Pulmonology', 'Nephrology', 'Endocrinology', 'Rheumatology'],
-        facilities: ['ICCU', 'Ventilator Support', 'Dialysis', '2D Echo', 'Stress Test'],
-        services: ['Cardiac Care', 'Kidney Care', 'Diabetes Management'],
-        hours: {
-          monday: '24/7',
-          tuesday: '24/7',
-          wednesday: '24/7',
-          thursday: '24/7',
-          friday: '24/7',
-          saturday: '24/7',
-          sunday: '24/7'
-        },
-        noOfPatients: 1100,
-        locationId: locations[4].id,
-      },
-    }),
-  ]);
+const specializations = [
+  "Cardiology", "Neurology", "Orthopedics", "Pediatrics", "Gynecology", "Dermatology",
+  "Gastroenterology", "Pulmonology", "Urology", "Oncology", "Endocrinology", "Nephrology",
+  "Rheumatology", "Psychiatry", "Ophthalmology", "ENT", "Radiology", "Anesthesiology"
+];
 
-  // Create labs
-  const labs = await Promise.all([
-    prisma.lab.create({
-      data: {
-        name: 'Dr. Lal PathLabs',
-        services: ['Blood Test', 'Urine Test', 'X-Ray', 'ECG', 'Ultrasound'],
-        locationId: locations[0].id,
-        hospitalId: hospitals[0].id,
-      },
-    }),
-    prisma.lab.create({
-      data: {
-        name: 'SRL Diagnostics',
-        services: ['Complete Blood Count', 'Lipid Profile', 'Thyroid Function', 'Diabetes Panel'],
-        locationId: locations[1].id,
-        hospitalId: hospitals[1].id,
-      },
-    }),
-    prisma.lab.create({
-      data: {
-        name: 'Metropolis Healthcare',
-        services: ['Allergy Tests', 'Hormone Tests', 'Cardiac Markers', 'Liver Function'],
-        locationId: locations[2].id,
-        hospitalId: hospitals[2].id,
-      },
-    }),
-    prisma.lab.create({
-      data: {
-        name: 'Thyrocare Technologies',
-        services: ['Thyroid Profile', 'Vitamin Tests', 'Cancer Markers', 'Infectious Disease'],
-        locationId: locations[3].id,
-      },
-    }),
-    prisma.lab.create({
-      data: {
-        name: 'Ganesh Diagnostic',
-        services: ['MRI', 'CT Scan', 'PET Scan', 'Mammography', 'Bone Density'],
-        locationId: locations[4].id,
-      },
-    }),
-  ]);
+const qualifications = [
+  ["MBBS", "MD", "DM"], ["MBBS", "MS", "MCh"], ["MBBS", "MD", "FRCP"],
+  ["MBBS", "MS", "FICS"], ["MBBS", "MD", "DNB"], ["MBBS", "MS", "MRCS"]
+];
 
-  // Create doctors
-  const doctors = await Promise.all([
-    prisma.doctor.create({
-      data: {
-        email: 'dr.sharma@fortis.com',
-        name: 'Dr. Rajesh Sharma',
-        phone: '+91-9876543210',
-        specialization: ['Cardiology', 'Internal Medicine'],
-        qualifications: ['MBBS', 'MD Cardiology', 'DM Interventional Cardiology'],
-        ratings: 4.8,
-        about: 'Senior Cardiologist with 15+ years experience in interventional cardiology',
-        price: 800,
-        noOfPatients: 2500,
-        hospitalId: hospitals[0].id,
-      },
-    }),
-    prisma.doctor.create({
-      data: {
-        email: 'dr.agarwal@fortis.com',
-        name: 'Dr. Priya Agarwal',
-        phone: '+91-9876543211',
-        specialization: ['Neurology'],
-        qualifications: ['MBBS', 'MD Neurology', 'Fellowship in Stroke Medicine'],
-        ratings: 4.7,
-        about: 'Neurologist specializing in stroke and epilepsy treatment',
-        price: 750,
-        noOfPatients: 1800,
-        hospitalId: hospitals[0].id,
-      },
-    }),
-    prisma.doctor.create({
-      data: {
-        email: 'dr.gupta@mgmc.com',
-        name: 'Dr. Suresh Gupta',
-        phone: '+91-9876543212',
-        specialization: ['General Surgery', 'Laparoscopic Surgery'],
-        qualifications: ['MBBS', 'MS General Surgery', 'MCh Surgical Gastroenterology'],
-        ratings: 4.6,
-        about: 'Expert in minimally invasive surgical procedures',
-        price: 600,
-        noOfPatients: 2100,
-        hospitalId: hospitals[1].id,
-      },
-    }),
-    prisma.doctor.create({
-      data: {
-        email: 'dr.verma@mgmc.com',
-        name: 'Dr. Sunita Verma',
-        phone: '+91-9876543213',
-        specialization: ['Gynecology', 'Obstetrics'],
-        qualifications: ['MBBS', 'MD Obstetrics & Gynecology', 'Fellowship in Fetal Medicine'],
-        ratings: 4.9,
-        about: 'Experienced gynecologist specializing in high-risk pregnancies',
-        price: 550,
-        noOfPatients: 3200,
-        hospitalId: hospitals[1].id,
-      },
-    }),
-    prisma.doctor.create({
-      data: {
-        email: 'dr.jain@narayana.com',
-        name: 'Dr. Amit Jain',
-        phone: '+91-9876543214',
-        specialization: ['Orthopedics', 'Joint Replacement'],
-        qualifications: ['MBBS', 'MS Orthopedics', 'Fellowship in Joint Replacement'],
-        ratings: 4.5,
-        about: 'Orthopedic surgeon with expertise in knee and hip replacements',
-        price: 700,
-        noOfPatients: 1600,
-        hospitalId: hospitals[2].id,
-      },
-    }),
-    prisma.doctor.create({
-      data: {
-        email: 'dr.singh@narayana.com',
-        name: 'Dr. Kavita Singh',
-        phone: '+91-9876543215',
-        specialization: ['Dermatology', 'Cosmetology'],
-        qualifications: ['MBBS', 'MD Dermatology', 'Fellowship in Cosmetic Dermatology'],
-        ratings: 4.7,
-        about: 'Dermatologist with expertise in skin diseases and cosmetic procedures',
-        price: 500,
-        noOfPatients: 2800,
-        hospitalId: hospitals[2].id,
-      },
-    }),
-    prisma.doctor.create({
-      data: {
-        email: 'dr.mehta@apex.com',
-        name: 'Dr. Rohit Mehta',
-        phone: '+91-9876543216',
-        specialization: ['ENT', 'Head and Neck Surgery'],
-        qualifications: ['MBBS', 'MS ENT', 'Fellowship in Rhinology'],
-        ratings: 4.4,
-        about: 'ENT specialist with focus on nasal and sinus disorders',
-        price: 450,
-        noOfPatients: 1900,
-        hospitalId: hospitals[3].id,
-      },
-    }),
-    prisma.doctor.create({
-      data: {
-        email: 'dr.patel@apex.com',
-        name: 'Dr. Neha Patel',
-        phone: '+91-9876543217',
-        specialization: ['Ophthalmology', 'Retina Surgery'],
-        qualifications: ['MBBS', 'MS Ophthalmology', 'Fellowship in Vitreo-Retinal Surgery'],
-        ratings: 4.8,
-        about: 'Eye specialist with expertise in retinal diseases and surgery',
-        price: 600,
-        noOfPatients: 2200,
-        hospitalId: hospitals[3].id,
-      },
-    }),
-    prisma.doctor.create({
-      data: {
-        email: 'dr.malhotra@ckbirla.com',
-        name: 'Dr. Vikram Malhotra',
-        phone: '+91-9876543218',
-        specialization: ['Pulmonology', 'Critical Care'],
-        qualifications: ['MBBS', 'MD Pulmonary Medicine', 'Fellowship in Critical Care'],
-        ratings: 4.6,
-        about: 'Pulmonologist with expertise in respiratory diseases and critical care',
-        price: 650,
-        noOfPatients: 1700,
-        hospitalId: hospitals[4].id,
-      },
-    }),
-    prisma.doctor.create({
-      data: {
-        email: 'dr.khurana@ckbirla.com',
-        name: 'Dr. Deepika Khurana',
-        phone: '+91-9876543219',
-        specialization: ['Endocrinology', 'Diabetes'],
-        qualifications: ['MBBS', 'MD Internal Medicine', 'DM Endocrinology'],
-        ratings: 4.7,
-        about: 'Endocrinologist specializing in diabetes and hormonal disorders',
-        price: 580,
-        noOfPatients: 2400,
-        hospitalId: hospitals[4].id,
-      },
-    }),
-  ]);
+const departments = [
+  "Emergency", "ICU", "Cardiology", "Neurology", "Orthopedics", "Pediatrics",
+  "Gynecology", "Surgery", "Radiology", "Pathology", "Pharmacy", "Physiotherapy"
+];
 
-  // Create users
-  const hashedPassword = await hash('password123', 10);
-  const users = await Promise.all([
-    prisma.user.create({
-      data: {
-        email: 'john.doe@email.com',
-        password: hashedPassword,
-        name: 'John Doe',
-        phone: '+91-8765432109',
-        verified: true,
-        gender: 'MALE',
-        dob: new Date('1990-05-15'),
-        address: 'A-123, Sector 7, Malviya Nagar, Jaipur',
-        role: Role.NORMAL,
-        locationId: locations[0].id,
-      },
-    }),
-    prisma.user.create({
-      data: {
-        email: 'jane.smith@email.com',
-        password: hashedPassword,
-        name: 'Jane Smith',
-        phone: '+91-8765432108',
-        verified: true,
-        gender: 'FEMALE',
-        dob: new Date('1985-08-22'),
-        address: 'B-456, Civil Lines, Jaipur',
-        role: Role.NORMAL,
-        locationId: locations[1].id,
-      },
-    }),
-    prisma.user.create({
-      data: {
-        email: 'admin@hospital.com',
-        password: hashedPassword,
-        name: 'Admin User',
-        gender: 'MALE',
-        phone: '+91-8765432107',
-        verified: true,
-        role: Role.ADMIN,
-        locationId: locations[2].id,
-      },
-    }),
-  ]);
+const facilities = [
+  "24/7 Emergency", "ICU", "NICU", "Operation Theater", "Blood Bank", "Pharmacy",
+  "Diagnostic Center", "Ambulance Service", "Parking", "Cafeteria", "WiFi", "AC Rooms"
+];
 
-  // Create availability for doctors (batch create to avoid connection issues)
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const availabilityData = [];
+const services = [
+  "General Consultation", "Emergency Care", "Surgery", "Diagnostic Services",
+  "Preventive Health Checkups", "Vaccination", "Home Care", "Telemedicine"
+];
 
-  for (const doctor of doctors) {
-    for (const day of days) {
-      availabilityData.push({
-        doctorId: doctor.id,
-        day,
-        startTime: '09:00',
-        endTime: '17:00',
-      });
-    }
-  }
+const labNames = [
+  "PathLab Diagnostics", "SRL Diagnostics", "Dr. Lal PathLabs", "Metropolis Healthcare",
+  "Thyrocare Technologies", "Quest Diagnostics", "Vijaya Diagnostic Centre", "Suburban Diagnostics",
+  "Healthians", "1mg Labs"
+];
 
-  // Use createMany for batch insert
-  await prisma.availability.createMany({
-    data: availabilityData,
-  });
+const labServices = [
+  "Blood Tests", "Urine Tests", "X-Ray", "Ultrasound", "ECG", "CT Scan", "MRI",
+  "Pathology", "Microbiology", "Biochemistry", "Hematology", "Immunology"
+];
 
-  // Create medical tests
-  const medicalTests = await Promise.all([
-    prisma.medicalTest.create({
-      data: {
-        name: 'Complete Blood Count',
-        category: 'Blood Test',
-        price: 300,
-        homeSample: true,
-        labId: labs[0].id,
-      },
-    }),
-    prisma.medicalTest.create({
-      data: {
-        name: 'Lipid Profile',
-        category: 'Blood Test',
-        price: 450,
-        homeSample: true,
-        labId: labs[0].id,
-      },
-    }),
-    prisma.medicalTest.create({
-      data: {
-        name: 'Thyroid Function Test',
-        category: 'Hormone Test',
-        price: 600,
-        homeSample: true,
-        labId: labs[1].id,
-      },
-    }),
-    prisma.medicalTest.create({
-      data: {
-        name: 'ECG',
-        category: 'Cardiac Test',
-        price: 200,
-        homeSample: false,
-        labId: labs[2].id,
-      },
-    }),
-    prisma.medicalTest.create({
-      data: {
-        name: 'X-Ray Chest',
-        category: 'Radiology',
-        price: 350,
-        homeSample: false,
-        labId: labs[3].id,
-      },
-    }),
-  ]);
+const medicalTests = [
+  { name: "Complete Blood Count (CBC)", category: "Hematology", price: 300, homeSample: true },
+  { name: "Lipid Profile", category: "Biochemistry", price: 800, homeSample: true },
+  { name: "Thyroid Profile", category: "Endocrinology", price: 600, homeSample: true },
+  { name: "Liver Function Test", category: "Biochemistry", price: 500, homeSample: true },
+  { name: "Kidney Function Test", category: "Biochemistry", price: 450, homeSample: true },
+  { name: "HbA1c", category: "Diabetes", price: 400, homeSample: true },
+  { name: "Vitamin D", category: "Vitamins", price: 1200, homeSample: true },
+  { name: "X-Ray Chest", category: "Radiology", price: 300, homeSample: false },
+  { name: "Ultrasound Abdomen", category: "Radiology", price: 800, homeSample: false },
+  { name: "ECG", category: "Cardiology", price: 200, homeSample: false }
+];
 
-  // Create reviews
-  const reviews = await Promise.all([
-    prisma.review.create({
-      data: {
-        userId: users[0].id,
-        rating: 5,
-        comment: 'Excellent treatment and care. Very professional staff.',
-        doctorId: doctors[0].id,
-      },
-    }),
-    prisma.review.create({
-      data: {
-        userId: users[1].id,
-        rating: 4,
-        comment: 'Good experience overall. Clean and well-maintained facility.',
-        hospitalId: hospitals[0].id,
-      },
-    }),
-    prisma.review.create({
-      data: {
-        userId: users[0].id,
-        rating: 5,
-        comment: 'Dr. Verma is very caring and explains everything clearly.',
-        doctorId: doctors[3].id,
-      },
-    }),
-  ]);
+// Indian cities with realistic coordinates
+const locations = [
+  { city: "Mumbai", lat: 19.0760, lng: 72.8777, addresses: ["Andheri West", "Bandra", "Juhu", "Powai", "Lower Parel"] },
+  { city: "Delhi", lat: 28.6139, lng: 77.2090, addresses: ["Connaught Place", "Karol Bagh", "Lajpat Nagar", "Saket", "Rohini"] },
+  { city: "Bangalore", lat: 12.9716, lng: 77.5946, addresses: ["Koramangala", "Whitefield", "Indiranagar", "JP Nagar", "Electronic City"] },
+  { city: "Chennai", lat: 13.0827, lng: 80.2707, addresses: ["T. Nagar", "Anna Nagar", "Velachery", "Adyar", "Porur"] },
+  { city: "Hyderabad", lat: 17.3850, lng: 78.4867, addresses: ["Banjara Hills", "Jubilee Hills", "Gachibowli", "Hitech City", "Kukatpally"] },
+  { city: "Pune", lat: 18.5204, lng: 73.8567, addresses: ["Koregaon Park", "Baner", "Wakad", "Kothrud", "Pimpri"] },
+  { city: "Kolkata", lat: 22.5726, lng: 88.3639, addresses: ["Park Street", "Salt Lake", "Ballygunge", "Alipore", "New Town"] },
+  { city: "Ahmedabad", lat: 23.0225, lng: 72.5714, addresses: ["Satellite", "Vastrapur", "Bodakdev", "Navrangpura", "Maninagar"] }
+];
 
-  // Create appointments
-  const appointments = await Promise.all([
-    prisma.appointment.create({
-      data: {
-        userId: users[0].id,
-        doctorId: doctors[0].id,
-        status: AppointmentStatus.CONFIRMED,
-        scheduledAt: new Date('2025-06-25T10:00:00Z'),
-      },
-    }),
-    prisma.appointment.create({
-      data: {
-        userId: users[1].id,
-        labId: labs[0].id,
-        testId: medicalTests[0].id,
-        status: AppointmentStatus.PENDING,
-        scheduledAt: new Date('2025-06-26T14:00:00Z'),
-      },
-    }),
-    prisma.appointment.create({
-      data: {
-        userId: users[0].id,
-        doctorId: doctors[2].id,
-        status: AppointmentStatus.COMPLETED,
-        scheduledAt: new Date('2025-06-15T11:30:00Z'),
-      },
-    }),
-  ]);
-
-  // Create medical records
-  const medicalRecords = await Promise.all([
-    prisma.medicalRecord.create({
-      data: {
-        userId: users[0].id,
-        history: ['Hypertension', 'Diabetes Type 2', 'Allergic to Penicillin'],
-        documents: ['prescription_2025_01.pdf', 'lab_report_2025_02.pdf'],
-      },
-    }),
-    prisma.medicalRecord.create({
-      data: {
-        userId: users[1].id,
-        history: ['Asthma', 'Migraine'],
-        documents: ['chest_xray_2025_01.pdf'],
-      },
-    }),
-  ]);
-
-  // Create notifications
-  const notifications = await Promise.all([
-    prisma.notification.create({
-      data: {
-        userId: users[0].id,
-        type: AppointmentStatus.CONFIRMED,
-        message: 'Your appointment with Dr. Rajesh Sharma has been confirmed for June 25, 2025 at 10:00 AM',
-        read: false,
-      },
-    }),
-    prisma.notification.create({
-      data: {
-        userId: users[1].id,
-        type: AppointmentStatus.PENDING,
-        message: 'Your lab test appointment is pending confirmation',
-        read: false,
-      },
-    }),
-  ]);
-
-  // Create test results
-  const testResults = await Promise.all([
-    prisma.testResult.create({
-      data: {
-        userId: users[0].id,
-        testId: medicalTests[0].id,
-        result: 'Normal - All parameters within reference range',
-        issuedAt: new Date('2025-06-10T09:00:00Z'),
-      },
-    }),
-  ]);
-
-
-  console.log('Database seeded successfully!');
-  console.log(`Created:
-    - ${locations.length} locations
-    - ${hospitals.length} hospitals
-    - ${labs.length} labs
-    - ${doctors.length} doctors
-    - ${users.length} users
-    - ${availabilityData.length} availability slots
-    - ${medicalTests.length} medical tests
-    - ${reviews.length} reviews
-    - ${appointments.length} appointments
-    - ${medicalRecords.length} medical records
-    - ${notifications.length} notifications
-    - ${testResults.length} test results
-}`)
+// Helper functions
+function getRandomElement(array : any[]) {
+  return array[Math.floor(Math.random() * array.length)];
 }
 
+function getRandomElements(array: any[], count: number) {
+  const shuffled = [...array].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, count);
+}
+
+function getRandomNumber(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getRandomFloat(min: number, max: number, decimals = 2) {
+  return parseFloat((Math.random() * (max - min) + min).toFixed(decimals));
+}
+
+function generateHours() {
+  return {
+    monday: { open: "09:00", close: "18:00" },
+    tuesday: { open: "09:00", close: "18:00" },
+    wednesday: { open: "09:00", close: "18:00" },
+    thursday: { open: "09:00", close: "18:00" },
+    friday: { open: "09:00", close: "18:00" },
+    saturday: { open: "09:00", close: "14:00" },
+    sunday: { open: "10:00", close: "13:00" }
+  };
+}
+
+function generateAvailability() {
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return days.map(day => ({
+    day,
+    startTime: "09:00",
+    endTime: day === 'Saturday' ? "14:00" : "17:00"
+  }));
+}
+
+async function main() {
+  console.log('🌱 Starting database seeding...');
+
+  try {
+    // Clear existing data
+    console.log('🗑️ Clearing existing data...');
+    await prisma.testResult.deleteMany();
+    await prisma.medicalTest.deleteMany();
+    await prisma.appointment.deleteMany();
+    await prisma.availability.deleteMany();
+    await prisma.doctor.deleteMany();
+    await prisma.review.deleteMany();
+    await prisma.lab.deleteMany();
+    await prisma.hospital.deleteMany();
+    await prisma.location.deleteMany();
+
+    // Create locations
+    console.log('📍 Creating locations...');
+    const createdLocations = [];
+    
+    for (const locationData of locations) {
+      for (let j = 0; j < locationData.addresses.length; j++) {
+        const location = await prisma.location.create({
+          data: {
+            lat: locationData.lat + (Math.random() - 0.5) * 0.1, // Add some variation
+            lng: locationData.lng + (Math.random() - 0.5) * 0.1,
+            address: `${locationData.addresses[j]}, ${locationData.city}`
+          }
+        });
+        createdLocations.push(location);
+      }
+    }
+
+    // Create hospitals with doctors
+    console.log('🏥 Creating hospitals and doctors...');
+    const createdHospitals = [];
+    
+    for (let i = 0; i < 20; i++) {
+      const location = getRandomElement(createdLocations);
+      
+      const hospital = await prisma.hospital.create({
+        data: {
+          name: hospitalNames[i],
+          picture: HOSPITAL_IMAGE,
+          banner: HOSPITAL_BANNER,
+          address: location.address,
+          departments: getRandomElements(departments, getRandomNumber(6, 10)),
+          facilities: getRandomElements(facilities, getRandomNumber(8, 12)),
+          services: getRandomElements(services, getRandomNumber(4, 8)),
+          hours: generateHours(),
+          noOfPatients: getRandomNumber(500, 5000),
+          locationId: location.id,
+          description: `${hospitalNames[i]} is a leading healthcare facility providing comprehensive medical services with state-of-the-art infrastructure and experienced medical professionals.`
+        }
+      });
+
+      createdHospitals.push(hospital);
+
+      // Create 4-6 doctors for each hospital
+      const doctorCount = getRandomNumber(4, 6);
+      for (let j = 0; j < doctorCount; j++) {
+        const isMale = Math.random() > 0.5;
+        const doctorName = getRandomElement(isMale ? doctorNames.male : doctorNames.female);
+        const specialization = getRandomElement(specializations);
+        
+        const doctor = await prisma.doctor.create({
+          data: {
+            email: `${doctorName.toLowerCase().replace(/[^a-z]/g, '')}@${hospitalNames[i].toLowerCase().replace(/[^a-z]/g, '')}.com`,
+            name: doctorName,
+            phone: `+91${getRandomNumber(7000000000, 9999999999)}`,
+            picture: isMale ? DOCTOR_MALE_IMAGE : DOCTOR_FEMALE_IMAGE,
+            specialization: [specialization],
+            qualifications: getRandomElement(qualifications),
+            ratings: getRandomFloat(3.5, 5.0, 1),
+            about: `${doctorName} is a highly experienced ${specialization} specialist with over ${getRandomNumber(5, 25)} years of practice. Dedicated to providing excellent patient care and treatment.`,
+            price: getRandomNumber(500, 2000),
+            noOfPatients: getRandomNumber(100, 1000),
+            hospitalId: hospital.id
+          }
+        });
+
+        // Create availability for each doctor
+        const availabilityData = generateAvailability();
+        for (const avail of availabilityData) {
+          await prisma.availability.create({
+            data: {
+              day: avail.day,
+              startTime: avail.startTime,
+              endTime: avail.endTime,
+              doctorId: doctor.id
+            }
+          });
+        }
+      }
+
+      console.log(`✅ Created hospital: ${hospital.name} with ${doctorCount} doctors`);
+    }
+
+    // Create labs with tests
+    console.log('🧪 Creating labs and medical tests...');
+    
+    for (let i = 0; i < 10; i++) {
+      const location = getRandomElement(createdLocations);
+      const hospitalId = Math.random() > 0.3 ? getRandomElement(createdHospitals).id : null; // 70% chance to be associated with a hospital
+      
+      const lab = await prisma.lab.create({
+        data: {
+          name: labNames[i],
+          picture: LAB_IMAGE,
+          banner: LAB_BANNER,
+          address: location.address,
+          services: getRandomElements(labServices, getRandomNumber(6, 10)),
+          hours: generateHours(),
+          noOfPatients: getRandomNumber(200, 2000),
+          locationId: location.id,
+          hospitalId: hospitalId,
+          description: `${labNames[i]} offers comprehensive diagnostic services with advanced technology and accurate results. We provide a wide range of pathology and radiology services.`
+        }
+      });
+
+      // Create availability for lab
+      const availabilityData = generateAvailability();
+      for (const avail of availabilityData) {
+        await prisma.availability.create({
+          data: {
+            day: avail.day,
+            startTime: avail.startTime,
+            endTime: avail.endTime,
+            labId: lab.id
+          }
+        });
+      }
+
+      // Add medical tests to each lab
+      const testsToAdd = getRandomElements(medicalTests, getRandomNumber(5, 8));
+      for (const testData of testsToAdd) {
+        await prisma.medicalTest.create({
+          data: {
+            ...testData,
+            price: testData.price + getRandomNumber(-50, 100), // Add some price variation
+            labId: lab.id
+          }
+        });
+      }
+
+      console.log(`✅ Created lab: ${lab.name} with ${testsToAdd.length} tests`);
+    }
+
+    // Create some sample reviews
+    console.log('⭐ Creating sample reviews...');
+    const hospitals = await prisma.hospital.findMany({ include: { doctors: true } });
+    
+    for (const hospital of hospitals.slice(0, 10)) { // Add reviews to first 10 hospitals
+      // Hospital review
+      await prisma.review.create({
+        data: {
+          rating: getRandomNumber(3, 5),
+          comment: `Great hospital with excellent facilities and caring staff. Highly recommended for quality healthcare services.`,
+          hospitalId: hospital.id
+        }
+      });
+
+      // Doctor reviews
+      for (const doctor of hospital.doctors.slice(0, 2)) { // Add reviews to first 2 doctors of each hospital
+        await prisma.review.create({
+          data: {
+            rating: getRandomNumber(4, 5),
+            comment: `Dr. ${doctor.name.split(' ')[1]} is very professional and knowledgeable. Excellent bedside manner and thorough examination.`,
+            doctorId: doctor.id
+          }
+        });
+      }
+    }
+
+    console.log('🎉 Database seeding completed successfully!');
+    console.log(`📊 Created:
+    - ${createdLocations.length} locations
+    - 20 hospitals
+    - ~${20 * 5} doctors (4-6 per hospital)
+    - 10 labs
+    - ~${10 * 6} medical tests
+    - Sample reviews
+    `);
+
+  } catch (error) {
+    console.error('❌ Error during seeding:', error);
+    throw error;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+// Run the seeding
 main()
   .catch((e) => {
-    console.error('Error seeding database:', e);
+    console.error(e);
     process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
   });

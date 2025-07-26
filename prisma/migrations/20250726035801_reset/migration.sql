@@ -62,6 +62,7 @@ CREATE TABLE "Hospital" (
     "services" TEXT[],
     "hours" JSONB NOT NULL,
     "noOfPatients" INTEGER NOT NULL DEFAULT 0,
+    "adminId" TEXT,
     "status" "Status" NOT NULL DEFAULT 'ACTIVE',
     "locationId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -97,10 +98,10 @@ CREATE TABLE "Link" (
 -- CreateTable
 CREATE TABLE "Availability" (
     "id" TEXT NOT NULL,
-    "doctorId" TEXT NOT NULL,
     "day" TEXT NOT NULL,
     "startTime" TEXT NOT NULL,
     "endTime" TEXT NOT NULL,
+    "doctorId" TEXT,
     "labId" TEXT,
 
     CONSTRAINT "Availability_pkey" PRIMARY KEY ("id")
@@ -201,14 +202,29 @@ CREATE TABLE "Request" (
     "id" TEXT NOT NULL,
     "userEmail" TEXT NOT NULL,
     "expiryTime" TIMESTAMP(3) NOT NULL,
-    "userId" TEXT NOT NULL,
     "status" "Status" NOT NULL DEFAULT 'PENDING',
+    "hospitalId" TEXT,
+    "userId" TEXT,
 
     CONSTRAINT "Request_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "BannerImages" (
+    "id" TEXT NOT NULL,
+    "imageUrl" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "BannerImages_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Link_url_key" ON "Link"("url");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "MedicalRecord_userId_key" ON "MedicalRecord"("userId");
@@ -216,11 +232,17 @@ CREATE UNIQUE INDEX "MedicalRecord_userId_key" ON "MedicalRecord"("userId");
 -- CreateIndex
 CREATE INDEX "MedicalRecord_userId_idx" ON "MedicalRecord"("userId");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "Request_hospitalId_key" ON "Request"("hospitalId");
+
 -- AddForeignKey
 ALTER TABLE "User" ADD CONSTRAINT "User_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "Location"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Doctor" ADD CONSTRAINT "Doctor_hospitalId_fkey" FOREIGN KEY ("hospitalId") REFERENCES "Hospital"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Hospital" ADD CONSTRAINT "Hospital_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Hospital" ADD CONSTRAINT "Hospital_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "Location"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -274,4 +296,7 @@ ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY
 ALTER TABLE "MedicalRecord" ADD CONSTRAINT "MedicalRecord_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Request" ADD CONSTRAINT "Request_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Request" ADD CONSTRAINT "Request_hospitalId_fkey" FOREIGN KEY ("hospitalId") REFERENCES "Hospital"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Request" ADD CONSTRAINT "Request_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
