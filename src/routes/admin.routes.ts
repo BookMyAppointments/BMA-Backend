@@ -135,7 +135,7 @@ router.put('/update-status', authenticateToken, isSuperAdmin, asyncHandler(async
 router.get('/:appointmentId/:action', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     const { appointmentId, action } = req.params;
 
-    
+
     const statusMap: Record<string, AppointmentStatus> = {
         confirm: "CONFIRMED",
         complete: "COMPLETED",
@@ -155,6 +155,40 @@ router.get('/:appointmentId/:action', authenticateToken, isAdmin, asyncHandler(a
     });
 
     res.status(200).json({ message: `Appointment marked as ${newStatus}`, appointment: updated });
+}));
+
+router.get('/get-banner-images', authenticateToken, isSuperAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const bannerImages = await prisma.bannerImages.findMany();
+        res.status(200).json(bannerImages);
+    } catch (error) {
+        console.error("Error fetching banner images:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}));
+
+router.put('/update-banner-images', authenticateToken, isSuperAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const bannerUpdates = req.body;
+
+        if (!Array.isArray(bannerUpdates)) {
+            return res.status(400).json({ message: "Request body must be an array" });
+        }
+
+        const updates = await Promise.all(
+            bannerUpdates.map(banner => 
+                prisma.bannerImages.update({
+                    where: { id: banner.id },
+                    data: { isActive: banner.isActive }
+                })
+            )
+        );
+
+        res.status(200).json({ message: "Banner images updated successfully", updates });
+    } catch (error) {
+        console.error("Error updating banner images:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
 }));
 
 export default router;
