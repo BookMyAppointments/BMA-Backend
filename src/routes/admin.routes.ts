@@ -157,7 +157,7 @@ router.get('/:appointmentId/:action', authenticateToken, isAdmin, asyncHandler(a
     res.status(200).json({ message: `Appointment marked as ${newStatus}`, appointment: updated });
 }));
 
-router.get('/get-banner-images', authenticateToken, isSuperAdmin, asyncHandler(async (req: Request, res: Response) => {
+router.get('/get-banner-images', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
     try {
         const bannerImages = await prisma.bannerImages.findMany();
         res.status(200).json(bannerImages);
