@@ -5,6 +5,7 @@ import cors from 'cors';
 import authRoutes from './routes/user.routes';
 import doctorRoutes from './routes/doctor.routes';
 import hospitalRoutes from './routes/hospital.routes';
+import contactRoutes from './routes/contact.routes';
 import labRoutes from './routes/lab.routes';
 import searchRoutes from './routes/search.routes';
 import appointmentRoutes from './routes/appointment.routes';
@@ -29,12 +30,14 @@ app.get('/', (req, res) => {
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use('/api/v1/hospitals', hospitalRoutes);
+
 app.use('/api/v1/labs', labRoutes);
 app.use('/api/v1/doctors', doctorRoutes);
 app.use('/api/v1/search', searchRoutes);
 app.use('/api/v1/appointments', appointmentRoutes);
 app.use('/api/v1/tests', testRoutes);
 app.use('/api/v1/file-upload', file_uploadRoutes);
+app.use('/api/v1/contact', contactRoutes);
 // app.use('/api/v1/payment', paymentRouter);
 
 export default app;
