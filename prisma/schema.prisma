@@ -31,6 +31,7 @@ model User {
   location      Location?       @relation(fields: [locationId], references: [id])
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
+  remainders     Remainder[]
 }
 
 model Doctor {
@@ -232,6 +233,25 @@ model BannerImages {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Remainder {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  time        DateTime
+  frequency   Frequency  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+enum Frequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
 }
 
 enum Role {

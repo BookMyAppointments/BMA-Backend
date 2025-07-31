@@ -11,6 +11,7 @@ import searchRoutes from './routes/search.routes';
 import appointmentRoutes from './routes/appointment.routes';
 import testRoutes from './routes/test.routes';
 import file_uploadRoutes from './services/file-upload.service';
+import RemainderRoutes from './routes/remainder.routes';
 import adminRoutes from './routes/admin.routes';
 // import paymentRouter from './routes/payment.routes';
 
@@ -38,6 +39,7 @@ app.use('/api/v1/appointments', appointmentRoutes);
 app.use('/api/v1/tests', testRoutes);
 app.use('/api/v1/file-upload', file_uploadRoutes);
 app.use('/api/v1/contact', contactRoutes);
+app.use('/api/v1/remainders', RemainderRoutes);
 // app.use('/api/v1/payment', paymentRouter);
 
 export default app;
