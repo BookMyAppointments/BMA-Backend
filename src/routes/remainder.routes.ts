@@ -1,6 +1,8 @@
 import { authenticateToken } from "../middlewares/auth.middleware";
 import { asyncHandler } from "../utils/asyncHandler";
 import { Router } from "express";
+import { prisma } from '../lib/prisma';
+import { RemainderProp } from '../types/remainder';
 const router = Router();
 
 router.post(
