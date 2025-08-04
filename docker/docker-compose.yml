@@ -2,8 +2,9 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:latest
-    container_name: postgres_healthcare
+    image: postgres:16
+    container_name: healthcare_postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: username
       POSTGRES_PASSWORD: password
@@ -12,13 +13,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - healthcare_network
+    command: >
+      postgres -c search_path=public
 
 volumes:
   postgres_data:
-    driver: local
-
-networks:
-  healthcare_network:
-    driver: bridge
