@@ -13,7 +13,8 @@ import testRoutes from './routes/test.routes';
 import file_uploadRoutes from './services/file-upload.service';
 import RemainderRoutes from './routes/remainder.routes';
 import adminRoutes from './routes/admin.routes';
-// import paymentRouter from './routes/payment.routes';
+import otpRoutes from './routes/otp.routes';
+import paymentRouter from './routes/payment.routes';
 
 dotenv.config();
 const app: Application = express();
@@ -40,6 +41,7 @@ app.use('/api/v1/tests', testRoutes);
 app.use('/api/v1/file-upload', file_uploadRoutes);
 app.use('/api/v1/contact', contactRoutes);
 app.use('/api/v1/remainders', RemainderRoutes);
-// app.use('/api/v1/payment', paymentRouter);
+app.use('/api/v1/otp', otpRoutes);
+app.use('/api/v1/payment', paymentRouter);
 
 export default app;

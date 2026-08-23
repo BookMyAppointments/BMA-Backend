@@ -39,7 +39,7 @@ router.get('/user', authenticateToken, asyncHandler(async (req: Request, res: Re
 router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
     try {
 
-        const { name, specialization, hospitalId } = req.query;
+        const { name, specialization, hospitalId, treats } = req.query;
 
         const where: any = {
             ...(name && {
@@ -50,6 +50,10 @@ router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
             }),
             ...(hospitalId && {
                 hospitalId: hospitalId as string
+            }),
+            //* Men / Women / Children filter from the home screen.
+            ...(treats && {
+                treats: { has: String(treats).toUpperCase() as any }
             })
         };
 

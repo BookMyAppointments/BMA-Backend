@@ -1,6 +1,6 @@
 import { AppointmentStatus } from "@prisma/client";
 import { prisma } from "../lib/prisma";
-import { sendSms } from "../utils/twilio";
+import { sendSms } from "../utils/messaging";
 import { sendNotificationEmail } from "../emails/NotificationMail";
 
 interface Notification {
@@ -28,9 +28,11 @@ export const sendNotification = async (notification: Notification): Promise<void
         // const mailResult = await sendNotificationEmail({});  
 
         if (user.phone) {
+            // The in-app notification above is the source of truth. SMS is
+            // best-effort: not being configured must not fail the caller.
             const smsResult = await sendSms(user.phone, notification.message);
-            if (!smsResult.success) {
-                throw new Error('Failed to send SMS');
+            if (!smsResult.delivered) {
+                console.warn(`[notification] SMS not delivered (${smsResult.reason}) for user ${user.id}`);
             }
         }
 

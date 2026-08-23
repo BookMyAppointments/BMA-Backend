@@ -113,6 +113,21 @@ function getRandomFloat(min: number, max: number, decimals = 2) {
   return parseFloat((Math.random() * (max - min) + min).toFixed(decimals));
 }
 
+//* Which patient groups a specialty realistically serves, so the
+//* Men / Women / Children filter returns sensible doctors.
+function treatsForSpecialization(specialization: string): string[] {
+  switch (specialization) {
+    case 'Pediatrics':
+      return ['CHILDREN'];
+    case 'Gynecology':
+      return ['WOMEN'];
+    case 'Urology':
+      return ['MEN', 'WOMEN'];
+    default:
+      return ['MEN', 'WOMEN', 'CHILDREN'];
+  }
+}
+
 function generateHours() {
   return {
     monday: { open: "09:00", close: "18:00" },
@@ -206,6 +221,7 @@ async function main() {
             phone: `+91${getRandomNumber(7000000000, 9999999999)}`,
             picture: isMale ? DOCTOR_MALE_IMAGE : DOCTOR_FEMALE_IMAGE,
             specialization: [specialization],
+            treats: treatsForSpecialization(specialization),
             qualifications: getRandomElement(qualifications),
             ratings: getRandomFloat(3.5, 5.0, 1),
             about: `${doctorName} is a highly experienced ${specialization} specialist with over ${getRandomNumber(5, 25)} years of practice. Dedicated to providing excellent patient care and treatment.`,

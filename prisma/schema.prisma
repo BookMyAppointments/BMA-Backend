@@ -12,7 +12,7 @@ model User {
   email         String          @unique
   password      String
   name          String
-  phone         String?
+  phone         String?         @unique
   verifyCode    String?
   verified      Boolean         @default(false)
   gender        Gender?
@@ -21,6 +21,16 @@ model User {
   picture       String?
   locationId    String?
   role          Role            @default(NORMAL)
+
+  // Health profile (shown on the patient's profile screen)
+  bloodGroup    BloodGroup?
+  heightCm      Float?
+  weightKg      Float?
+
+  // Phone OTP sign-in
+  otpCode       String?
+  otpExpiresAt  DateTime?
+  payments      Payment[]
   medicalRecord MedicalRecord[]
   appointments  Appointment[]
   testResults   TestResult[]
@@ -42,6 +52,7 @@ model Doctor {
   picture        String?
   specialization String[]
   qualifications String[]
+  treats         PatientType[]  @default([MEN, WOMEN, CHILDREN])
   ratings        Float?
   about          String?
   price          Float
@@ -158,6 +169,7 @@ model Appointment {
   doctor        Doctor?           @relation(fields: [doctorId], references: [id])
   lab           Lab?              @relation(fields: [labId], references: [id])
   test          MedicalTest?      @relation(fields: [testId], references: [id])
+  payment       Payment?
 }
 
 enum AppointmentStatus {
@@ -172,6 +184,55 @@ enum Gender {
   MALE
   FEMALE
   OTHER
+}
+
+enum BloodGroup {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+}
+
+//* Who a doctor treats. Drives the Men / Women / Children filter on the home screen.
+enum PatientType {
+  MEN
+  WOMEN
+  CHILDREN
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  RAZORPAY
+  PAY_AT_HOSPITAL
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  userId            String
+  appointmentId     String?       @unique
+  amount            Float
+  currency          String        @default("INR")
+  status            PaymentStatus @default(PENDING)
+  method            PaymentMethod @default(RAZORPAY)
+  providerOrderId   String?
+  providerPaymentId String?
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointment       Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
 }
 
 model MedicalTest {
