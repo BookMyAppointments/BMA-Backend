@@ -170,6 +170,7 @@ router.get('/labs', asyncHandler(async (req: Request, res: Response) => {
             where,
             include: {
                 location: true,
+                tests: true,
                 hospital: {
                     include: {
                         location: true

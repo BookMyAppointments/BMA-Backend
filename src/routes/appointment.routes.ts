@@ -120,7 +120,8 @@ console.log("running as fine ");
                 return res.status(404).json({ message: "Lab not found" });
             }
 
-            const dayOfWeek = appointmentTime.getDay().toString();
+            const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const dayOfWeek = dayNames[appointmentTime.getDay()];
             const timeStr = appointmentTime.toTimeString().slice(0, 5);
 
             const labAvailable = lab.availability.some(slot =>
@@ -772,14 +773,15 @@ router.get('/labs/availability/:id', asyncHandler(async (req: Request, res: Resp
         }
 
         const selectedDate = new Date(date as string);
-        const dayOfWeek = selectedDate.getDay();
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayOfWeek = dayNames[selectedDate.getDay()];
 
         const lab = await prisma.lab.findUnique({
             where: { id },
             include: {
                 availability: {
                     where: {
-                        day: dayOfWeek.toString()
+                        day: dayOfWeek
                     }
                 }
             }
@@ -790,7 +792,7 @@ router.get('/labs/availability/:id', asyncHandler(async (req: Request, res: Resp
         }
 
         if (lab.availability.length === 0) {
-            return res.status(200).json({ slots: [] });
+            return res.status(200).json({ slots: [], message: `Lab is not available on ${dayOfWeek}` });
         }
 
         const availability = lab.availability[0];
@@ -822,7 +824,11 @@ router.get('/labs/availability/:id', asyncHandler(async (req: Request, res: Resp
             // Allow only 3 concurrent appointments as a default
             const maxConcurrent = process.env.MAX_ATTEMPTS_TO_BOOK ? parseInt(process.env.MAX_ATTEMPTS_TO_BOOK) : 3;
             if (concurrentAppointments < maxConcurrent) {
-                slots.push(new Date(currentSlot));
+                slots.push({
+                    dateTime: currentSlot.toISOString(),
+                    time: currentSlot.toTimeString().slice(0, 5),
+                    available: true
+                });
             }
 
             currentSlot = new Date(currentSlot.getTime() + 15 * 60000);
