@@ -129,7 +129,7 @@ router.put('/update-status', authenticateToken, isSuperAdmin, asyncHandler(async
                 }),
                 prisma.hospital.update({
                     where: { id: updatedRequest.hospitalId },
-                    data: { adminId: updatedRequest.userId }
+                    data: { adminId: updatedRequest.userId, status: 'ACTIVE' }
                 })
             ]);
         }

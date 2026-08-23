@@ -54,7 +54,11 @@ router.get('/doctors', asyncHandler(async (req: Request, res: Response) => {
             //* Men / Women / Children filter from the home screen.
             ...(treats && {
                 treats: { has: String(treats).toUpperCase() as any }
-            })
+            }),
+            // Hide doctors attached to a hospital still awaiting super admin
+            // approval. Doctors with no hospital (none currently, but the
+            // relation is optional) stay visible.
+            OR: [{ hospitalId: null }, { hospital: { status: 'ACTIVE' } }]
         };
 
         const doctors = await prisma.doctor.findMany({
@@ -82,7 +86,9 @@ router.get('/hospitals', asyncHandler(async (req: Request, res: Response) => {
     try {
         const { name, lat, lng, radius, department, service, location } = req.query;
 
+        // Only hospitals a super admin has approved are visible to patients.
         const where: any = {
+            status: 'ACTIVE',
             name: name ? { contains: name as string, mode: 'insensitive' } : undefined,
             departments: department ? { has: department as string } : undefined,
             services: service ? { has: service as string } : undefined
@@ -153,7 +159,10 @@ router.get('/labs', asyncHandler(async (req: Request, res: Response) => {
 
         const where: any = {
             name: name ? { contains: name as string, mode: 'insensitive' } : undefined,
-            services: service ? { has: service as string } : undefined
+            services: service ? { has: service as string } : undefined,
+            // Hide labs attached to a hospital still awaiting super admin
+            // approval. Standalone labs (no hospital) stay visible.
+            OR: [{ hospitalId: null }, { hospital: { status: 'ACTIVE' } }]
         };
 
         // Add location search if provided

@@ -10,7 +10,8 @@ router.get('/get', asyncHandler(async (req: Request, res: Response) => {
     try {
         const { department, service } = req.query;
 
-        const where: any = {};
+        // Only hospitals a super admin has approved are visible to patients.
+        const where: any = { status: 'ACTIVE' };
 
         if (department) {
             where.departments = {
@@ -43,7 +44,7 @@ router.get('/get/:id', asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
 
         const hospital = await prisma.hospital.findFirst({
-            where: { id },
+            where: { id, status: 'ACTIVE' },
             include: {
                 location: true,
                 labs: {
@@ -118,6 +119,9 @@ router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Requ
                     services: services,
                     hours: hours,
                     address: location.address,
+                    // Stays invisible to patients until a super admin approves
+                    // the admin request created below.
+                    status: 'PENDING',
                     location: {
                         connect: { id: newLocation.id }
                     },

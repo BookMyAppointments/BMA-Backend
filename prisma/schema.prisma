@@ -248,13 +248,14 @@ model MedicalTest {
 }
 
 model TestResult {
-  id       String      @id @default(uuid())
-  userId   String
-  testId   String
-  result   String
-  issuedAt DateTime
-  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  test     MedicalTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+  id        String      @id @default(uuid())
+  userId    String
+  testId    String
+  resultUrl String
+  notes     String?
+  issuedAt  DateTime
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  test      MedicalTest @relation(fields: [testId], references: [id], onDelete: Cascade)
 }
 
 model Notification {

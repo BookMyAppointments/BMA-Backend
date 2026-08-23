@@ -2,12 +2,16 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { authenticateToken } from '../middlewares/auth.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
-import { isLab } from '../middlewares/lab.middleware';
+import { isAdmin } from '../middlewares/admin.middleware';
+import multer from 'multer';
+import imageUploadUtil from '../lib/cloudinary';
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = Router();
 
 //* Create a new medical test (Admin/Lab)
-router.post('/create', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
+router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { name, category, price, homeSample, labId } = req.body;
 
@@ -119,7 +123,7 @@ router.get('/get/:id', asyncHandler(async (req: Request, res: Response) => {
 }));
 
 //* Update medical test (Admin/Lab)
-router.put('/update/:id', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
+router.put('/update/:id', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { name, category, price, homeSample } = req.body;
@@ -156,7 +160,7 @@ router.put('/update/:id', authenticateToken, isLab, asyncHandler(async (req: Req
 }));
 
 //* Delete medical test (Admin/Lab)
-router.delete('/delete/:id', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
+router.delete('/delete/:id', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
@@ -202,10 +206,15 @@ router.get('/categories/all', asyncHandler(async (req: Request, res: Response) =
 }));
 
 //* Upload test results (Lab)
-router.post('/results/:id', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
+router.post('/results/:id', authenticateToken, isAdmin, upload.single('file'), asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { userId, result } = req.body;
+        const { userId, notes } = req.body;
+        const file = (req as Request & { file?: Express.Multer.File }).file;
+
+        if (!file) {
+            return res.status(400).json({ message: "A report file is required" });
+        }
 
         const test = await prisma.medicalTest.findUnique({
             where: { id }
@@ -223,11 +232,17 @@ router.post('/results/:id', authenticateToken, isLab, asyncHandler(async (req: R
             return res.status(404).json({ message: "User not found" });
         }
 
+        const uploadResult = await imageUploadUtil.imageUploadUtil(file.buffer, file.mimetype);
+        if (!uploadResult) {
+            return res.status(500).json({ message: "Report upload failed" });
+        }
+
         const testResult = await prisma.testResult.create({
             data: {
                 userId,
                 testId: id,
-                result,
+                resultUrl: uploadResult.secure_url,
+                notes: notes || null,
                 issuedAt: new Date()
             },
             include: {
@@ -279,7 +294,7 @@ router.get('/results/get', authenticateToken, asyncHandler(async (req: Request, 
 }));
 
 //* Get test results for a specific test (Lab)
-router.get('/results/:id', authenticateToken, isLab, asyncHandler(async (req: Request, res: Response) => {
+router.get('/results/:id', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
