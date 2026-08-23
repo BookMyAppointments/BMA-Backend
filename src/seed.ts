@@ -246,7 +246,7 @@ async function main() {
           banner: LAB_BANNER,
           address: location.address,
           services: getRandomElements(labServices, getRandomNumber(6, 10)),
-          hours: generateHours(),
+          hours: generateAvailability(),
           noOfPatients: getRandomNumber(200, 2000),
           locationId: location.id,
           hospitalId: hospitalId,
