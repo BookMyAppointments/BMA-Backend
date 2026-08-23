@@ -5,9 +5,11 @@ const prisma = new PrismaClient();
 const DOCTOR_MALE_IMAGE = "https://static.vecteezy.com/system/resources/thumbnails/026/375/249/small_2x/ai-generative-portrait-of-confident-male-doctor-in-white-coat-and-stethoscope-standing-with-arms-crossed-and-looking-at-camera-photo.jpg";
 const DOCTOR_FEMALE_IMAGE = "https://img.freepik.com/free-photo/beautiful-young-female-doctor-looking-camera-office_1301-7807.jpg?semt=ais_hybrid&w=740&q=80";
 const HOSPITAL_IMAGE = "https://media.gettyimages.com/id/1312706413/photo/modern-hospital-building.jpg?s=612x612&w=gi&k=20&c=1-EC4Mxf--5u4ItDIzrIOrduXlbKRnbx9xWWtiifrDo=";
-const HOSPITAL_BANNER = "https://picsum.photos/1200/400";
+// Picsum returns random stock photos (curtains, shoes) which look broken on a
+// healthcare page. Use a real hospital image instead.
+const HOSPITAL_BANNER = "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=1200&h=400&fit=crop";
 const LAB_IMAGE = "https://media.gettyimages.com/id/1312706413/photo/modern-hospital-building.jpg?s=612x612&w=gi&k=20&c=1-EC4Mxf--5u4ItDIzrIOrduXlbKRnbx9xWWtiifrDo=";
-const LAB_BANNER = "https://picsum.photos/1200/400";
+const LAB_BANNER = "https://images.unsplash.com/photo-1579154204601-01588f351e67?w=1200&h=400&fit=crop";
 
 // Sample data arrays
 const hospitalNames = [
