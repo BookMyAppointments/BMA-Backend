@@ -195,4 +195,27 @@ router.put('/update', authenticateToken, isAdmin, asyncHandler(async (req: Reque
     }
 }));
 
+//* Bookings for a lab (staff only -- includes patient contact details).
+router.get('/:labId/appointments', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const { labId } = req.params;
+
+        const appointments = await prisma.appointment.findMany({
+            where: { labId },
+            include: {
+                user: {
+                    select: { id: true, name: true, email: true, phone: true, picture: true }
+                },
+                test: true
+            },
+            orderBy: { scheduledAt: 'desc' }
+        });
+
+        res.status(200).json({ appointments });
+    } catch (error) {
+        console.error("Error fetching lab appointments:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}));
+
 export default router;
