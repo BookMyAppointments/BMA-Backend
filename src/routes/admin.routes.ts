@@ -99,10 +99,6 @@ router.get('/get-all-requests', authenticateToken, isSuperAdmin, asyncHandler(as
             },
         });
 
-        if (adminRequests.length === 0) {
-            return res.status(404).json({ message: "No admin requests found" });
-        }
-
         res.status(200).json(adminRequests);
 
     } catch (error) {
@@ -121,8 +117,22 @@ router.put('/update-status', authenticateToken, isSuperAdmin, asyncHandler(async
 
         const updatedRequest = await prisma.request.update({
             where: { id: requestId },
-            data: { status }
+            data: { status },
+            include: { user: true, hospital: true }
         });
+
+        if (status === "ACTIVE" && updatedRequest.userId && updatedRequest.hospitalId) {
+            await prisma.$transaction([
+                prisma.user.update({
+                    where: { id: updatedRequest.userId },
+                    data: { role: "ADMIN" }
+                }),
+                prisma.hospital.update({
+                    where: { id: updatedRequest.hospitalId },
+                    data: { adminId: updatedRequest.userId }
+                })
+            ]);
+        }
 
         res.status(200).json(updatedRequest);
 
