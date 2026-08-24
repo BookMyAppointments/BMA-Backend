@@ -38,6 +38,7 @@ model User {
   requests      Request[]
   reviews       Review[]
   hospitals     Hospital[]
+  labs          Lab[]
   location      Location?       @relation(fields: [locationId], references: [id])
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
@@ -141,6 +142,9 @@ model Lab {
   hospital     Hospital?      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   appointments Appointment[]
   status       Status         @default(ACTIVE)
+  adminId      String?
+  admin        User?          @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  request      Request?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
@@ -285,6 +289,8 @@ model Request {
   status     Status    @default(PENDING)
   hospitalId String?   @unique
   hospital   Hospital? @relation(fields: [hospitalId], references: [id])
+  labId      String?   @unique
+  lab        Lab?      @relation(fields: [labId], references: [id])
   userId     String?
   user       User?     @relation(fields: [userId], references: [id])
 }

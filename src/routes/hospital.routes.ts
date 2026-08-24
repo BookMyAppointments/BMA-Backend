@@ -72,7 +72,10 @@ router.get('/get/:id', asyncHandler(async (req: Request, res: Response) => {
     }
 }));
 
-router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Request, res: Response) => {
+//* Register a hospital. Any signed-in user can submit -- the real gate is
+//* super admin approval, not the caller's current role. Stays invisible to
+//* patients (status: PENDING) until then.
+router.post('/create', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
 
     const { uniqueCode } = req.query;
     // const uniqueLink = `${process.env.CORS_ORIGIN}/admin/hospital/create?uniqueCode=${uniqueCode}`;
@@ -100,6 +103,15 @@ router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Requ
 
         if (!Array.isArray(departments) || !Array.isArray(facilities) || !Array.isArray(services)) {
             return res.status(400).json({ message: "Departments, facilities, and services should be arrays" });
+        }
+
+        // The old invite-link flow still works if a code was issued, but is no
+        // longer required -- approval by a super admin is the real gate now.
+        if (uniqueCode) {
+            const link = await prisma.link.findUnique({ where: { url: uniqueCode as string } });
+            if (!link || !link.isActive) {
+                return res.status(400).json({ message: "Invalid or inactive link" });
+            }
         }
 
         const newLocation = await prisma.location.create({
@@ -146,14 +158,16 @@ router.post('/create', authenticateToken, isAdmin, asyncHandler(async (req: Requ
                 }
             });
 
-            await tx.link.updateMany({
-                where: {
-                    url: uniqueCode as string
-                },
-                data: {
-                    isActive: false
-                }
-            });
+            if (uniqueCode) {
+                await tx.link.updateMany({
+                    where: {
+                        url: uniqueCode as string
+                    },
+                    data: {
+                        isActive: false
+                    }
+                });
+            }
         });
 
         res.status(201).json({
@@ -271,22 +285,47 @@ router.put('/update', authenticateToken, isAdmin, asyncHandler(async (req: Reque
     });
 }));
 
+//* Full roster for the super admin console, every status included.
+router.get('/admin/all', authenticateToken, isSuperAdmin, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const hospitals = await prisma.hospital.findMany({
+            include: {
+                location: true,
+                admin: { select: { id: true, name: true, email: true, phone: true } },
+                _count: { select: { doctors: true, labs: true } }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        res.status(200).json(hospitals);
+    } catch (error) {
+        console.error("Error listing hospitals:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}));
+
+//* Suspend or reactivate a hospital, hiding/restoring it for patients.
 router.put('/suspend', authenticateToken, isSuperAdmin, asyncHandler(async (req: Request, res: Response) => {
     try {
         const { id } = req.query;
+        const { status } = req.body as { status?: 'ACTIVE' | 'SUSPENDED' };
 
         if (!id) {
             return res.status(400).json({ message: "Hospital ID is required" });
         }
 
-        await prisma.hospital.update({
+        if (status !== 'ACTIVE' && status !== 'SUSPENDED') {
+            return res.status(400).json({ message: "status must be ACTIVE or SUSPENDED" });
+        }
+
+        const hospital = await prisma.hospital.update({
             where: { id: id as string },
-            data: { status: "SUSPENDED" }
+            data: { status }
         });
 
-        res.status(200).json({ message: "Hospital deleted successfully" });
+        res.status(200).json({ message: `Hospital ${status === 'SUSPENDED' ? 'suspended' : 'reactivated'}`, hospital });
     } catch (error) {
-        console.error("Error suspending hospital:", error);
+        console.error("Error updating hospital status:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 }));

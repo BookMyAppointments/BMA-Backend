@@ -96,6 +96,21 @@ router.get('/get-all-requests', authenticateToken, isSuperAdmin, asyncHandler(as
                         },
                     }
                 },
+                lab: {
+                    select: {
+                        id: true,
+                        name: true,
+                        services: true,
+                        hospital: { select: { id: true, name: true } },
+                        location: {
+                            select: {
+                                lat: true,
+                                lng: true,
+                                address: true,
+                            }
+                        },
+                    }
+                },
             },
         });
 
@@ -118,7 +133,7 @@ router.put('/update-status', authenticateToken, isSuperAdmin, asyncHandler(async
         const updatedRequest = await prisma.request.update({
             where: { id: requestId },
             data: { status },
-            include: { user: true, hospital: true }
+            include: { user: true, hospital: true, lab: true }
         });
 
         if (status === "ACTIVE" && updatedRequest.userId && updatedRequest.hospitalId) {
@@ -129,6 +144,17 @@ router.put('/update-status', authenticateToken, isSuperAdmin, asyncHandler(async
                 }),
                 prisma.hospital.update({
                     where: { id: updatedRequest.hospitalId },
+                    data: { adminId: updatedRequest.userId, status: 'ACTIVE' }
+                })
+            ]);
+        } else if (status === "ACTIVE" && updatedRequest.userId && updatedRequest.labId) {
+            await prisma.$transaction([
+                prisma.user.update({
+                    where: { id: updatedRequest.userId },
+                    data: { role: "ADMIN" }
+                }),
+                prisma.lab.update({
+                    where: { id: updatedRequest.labId },
                     data: { adminId: updatedRequest.userId, status: 'ACTIVE' }
                 })
             ]);

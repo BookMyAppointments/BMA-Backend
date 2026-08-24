@@ -158,10 +158,12 @@ router.get('/labs', asyncHandler(async (req: Request, res: Response) => {
         const { name, lat, lng, radius, service, location } = req.query;
 
         const where: any = {
+            // The lab itself must be approved (not PENDING) and not suspended.
+            status: 'ACTIVE',
             name: name ? { contains: name as string, mode: 'insensitive' } : undefined,
             services: service ? { has: service as string } : undefined,
-            // Hide labs attached to a hospital still awaiting super admin
-            // approval. Standalone labs (no hospital) stay visible.
+            // Also hide labs attached to a hospital still awaiting approval.
+            // Standalone labs (no hospital) aren't affected by this clause.
             OR: [{ hospitalId: null }, { hospital: { status: 'ACTIVE' } }]
         };
 
