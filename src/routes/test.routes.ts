@@ -4,7 +4,7 @@ import { authenticateToken } from '../middlewares/auth.middleware';
 import { asyncHandler } from '../utils/asyncHandler';
 import { isAdmin } from '../middlewares/admin.middleware';
 import multer from 'multer';
-import imageUploadUtil from '../lib/cloudinary';
+import imageUploadUtil, { cloudinaryConfigured } from '../lib/cloudinary';
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -214,6 +214,12 @@ router.post('/results/:id', authenticateToken, isAdmin, upload.single('file'), a
 
         if (!file) {
             return res.status(400).json({ message: "A report file is required" });
+        }
+
+        if (!cloudinaryConfigured) {
+            return res.status(503).json({
+                message: "File storage is not configured on this environment. Add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to the backend .env, then restart the server."
+            });
         }
 
         const test = await prisma.medicalTest.findUnique({
