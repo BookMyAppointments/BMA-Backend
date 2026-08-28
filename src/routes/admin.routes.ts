@@ -226,4 +226,30 @@ router.put('/update-banner-images', authenticateToken, isSuperAdmin, asyncHandle
     }
 }));
 
+//* The requester's own hospital/lab registrations, so they can check status
+//* without a super admin telling them anything -- any signed-in user, no
+//* special role needed, scoped to their own requests only.
+router.get('/my-requests', authenticateToken, asyncHandler(async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user.id;
+
+        const requests = await prisma.request.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                status: true,
+                createdAt: true,
+                hospital: { select: { id: true, name: true } },
+                lab: { select: { id: true, name: true } },
+            },
+        });
+
+        res.status(200).json(requests);
+    } catch (error) {
+        console.error("Error fetching own requests:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+}));
+
 export default router;
