@@ -293,6 +293,7 @@ model Request {
   lab        Lab?      @relation(fields: [labId], references: [id])
   userId     String?
   user       User?     @relation(fields: [userId], references: [id])
+  createdAt  DateTime  @default(now())
 }
 
 model BannerImages {

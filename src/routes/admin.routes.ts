@@ -72,10 +72,9 @@ router.get("/admin-verify-code/:code", asyncHandler(async (req: Request, res: Re
 router.get('/get-all-requests', authenticateToken, isSuperAdmin, asyncHandler(async (req: Request, res: Response) => {
     try {
         const adminRequests = await prisma.request.findMany({
-            where: {
-                status: "PENDING",
-            },
+            orderBy: { createdAt: 'desc' },
             select: {
+                createdAt: true,
                 id: true,
                 userEmail: true,
                 expiryTime: true,
