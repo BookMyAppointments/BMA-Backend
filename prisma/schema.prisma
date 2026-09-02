@@ -4,7 +4,12 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Runtime queries: pooled connection. Serverless opens a connection per
+  // invocation, so an unpooled URL exhausts Postgres under any real traffic.
+  url       = env("DATABASE_URL")
+  // Migrations: unpooled. `migrate deploy` needs session-level advisory locks,
+  // which a transaction-mode pooler does not support.
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
