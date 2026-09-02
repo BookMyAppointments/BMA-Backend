@@ -11,22 +11,6 @@ const router = Router();
 const OTP_TTL_MINUTES = 10;
 const isProduction = process.env.NODE_ENV === 'production';
 
-/**
- * Returns the OTP in the API response so it can be read on screen.
- *
- * DEMO ONLY. While this is on, anyone who can reach the API can sign in as any
- * phone number, including an existing admin's. It exists so a client can test
- * the app before SMS delivery is paid for. Turn it off before real users.
- */
-const exposeOtpForDemo = process.env.SHOW_OTP_IN_RESPONSE === 'true';
-
-if (exposeOtpForDemo && isProduction) {
-    console.warn(
-        '[otp] SHOW_OTP_IN_RESPONSE is enabled in production. Verification codes are ' +
-        'returned in API responses, so anyone can sign in as any number. Demo use only.'
-    );
-}
-
 /** Keep only digits, then require a plausible 10-15 digit number. */
 const normalisePhone = (raw: unknown): string | null => {
     if (typeof raw !== 'string') return null;
@@ -77,10 +61,9 @@ router.post('/request', asyncHandler(async (req: Request, res: Response) => {
             ? 'Verification code sent.'
             : 'Verification code generated. SMS delivery is not configured on this environment.',
         smsConfigured,
-        // Hand the code back so the flow is testable without a paid SMS
-        // provider: always in local dev, and in production only behind the
-        // explicit SHOW_OTP_IN_RESPONSE demo flag.
-        ...(!isProduction || exposeOtpForDemo ? { devCode: code } : {}),
+        // Outside production, hand the code back so the flow is testable without
+        // a paid SMS provider. Never do this in production.
+        ...(isProduction ? {} : { devCode: code }),
     });
 }));
 
